@@ -1,5 +1,4 @@
-# CSC510_G19
-Software Engineering (CSC510) Project
+# Software Engineering (CSC510-Group19) Project
 
 
 ## Team Members:
