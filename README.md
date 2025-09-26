@@ -2,7 +2,9 @@
 Software Engineering (CSC510) Project
 
 
-Team Members 
-Digvijay Sanjeev Sonvane
-Suyesh Jadhav
-Vanaja Agarwal
+## Team Members:
+|Index|Name|
+|----|------|
+|1.|Digvijay Sanjeev Sonvane|
+|2.|Suyesh Jadhav|
+|3. |Vanaja Agarwal|
