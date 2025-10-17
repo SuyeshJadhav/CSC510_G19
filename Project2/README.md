@@ -1,6 +1,6 @@
 # WolfBite
 
-![Flutter CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/flutter-ci.yml/badge.svg)
+![Flutter CI](https://github.com/SuyeshJadhav/CSC510_G19/actions/workflows/flutter-ci.yml/badge.svg)
 
 A food delivery app with a main feature that uses a barcode reader for WIC eligibility checking. This project is developed for the CSC510 software engineering course.
 
