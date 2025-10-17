@@ -37,6 +37,6 @@ Our project relies on the following third-party packages. All dependencies can b
 |---|---|---|---|---|
 | `firebase_core` | `^4.2.0` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/firebase_core) | Yes |
 | `go_router` | `^16.2.5` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/go_router) | Yes |
-| `provider` | `^6.1.5+1` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/provider) | Yes |
-|`mobile_scanner`| `^7.1.2` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/mobile_scanner) | Yes |
-|`qr_flutter`| `^4.1.0` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/qr_flutter) | Yes |
+| `provider` | `^6.1.5+1` | **MIT** | [pub.dev link](https://pub.dev/packages/provider) | Yes |
+| `mobile_scanner` | `^7.1.2` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/mobile_scanner) | Yes |
+| `qr_flutter` | `^4.1.0` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/qr_flutter) | Yes |
