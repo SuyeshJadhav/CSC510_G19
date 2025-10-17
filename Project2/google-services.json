@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "27401901723",
+    "project_id": "wolfbite-465ae",
+    "storage_bucket": "wolfbite-465ae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:27401901723:android:75bd0fb307192398ea183e",
+        "android_client_info": {
+          "package_name": "com.csc510.wolfbite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpBoO_wjk10NiYxNT4cwPGR_DQW4xxy1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:27401901723:android:36b7c2853729c5e6ea183e",
+        "android_client_info": {
+          "package_name": "com.example.wolfbite"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpBoO_wjk10NiYxNT4cwPGR_DQW4xxy1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
