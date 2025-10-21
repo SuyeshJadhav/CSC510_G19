@@ -1,4 +1,3 @@
-````markdown
 # Contributing Guidelines
 
 ## 1. Overview
@@ -11,8 +10,6 @@ It includes both frontend (Flutter) and backend (Firebase/FastAPI) components.
 - Be respectful and professional in all communication.  
 - Keep all collaboration within GitHub Issues and Pull Requests.  
 - Review others’ code carefully before approving merges.
-
----
 
 ## 3. Project Setup
 
@@ -121,7 +118,5 @@ Each new feature should include at least one test case.
 
 * Update `README.md` for new setup or feature instructions.
 * Update this file if the contribution process changes.
-
-````
 
 
