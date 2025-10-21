@@ -1,0 +1,35 @@
+name: Flutter CI
+on:
+  push:
+    branches: [ "MAIN" ]
+  pull_request:
+    branches: [ "MAIN" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./Project2
+
+    steps:
+      # Step 1: Download the code from the repository.
+      - uses: actions/checkout@v4
+
+      # Step 2: Install the Flutter software on the machine.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      # Step 3: Install all the packages the app needs (from pubspec.yaml).
+      - run: flutter pub get
+
+      # Step 4: Check if the code is formatted correctly.
+      - run: flutter format --output=none --set-exit-if-changed .
+
+      # Step 5: Analyze the code for potential bugs and style issues.
+      - run: flutter analyze
+
+      # Step 6: Run automated tests.
+      - run: flutter test
