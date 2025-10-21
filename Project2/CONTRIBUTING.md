@@ -2,7 +2,6 @@
 
 ## 1. Overview
 This repository contains the **Smart WIC Cart** project for CSC 510 – Software Engineering at NC State University.  
-It includes both frontend (Flutter) and backend (Firebase/FastAPI) components.
 
 ---
 
@@ -15,8 +14,8 @@ It includes both frontend (Flutter) and backend (Firebase/FastAPI) components.
 
 ### Clone the repository
 ```bash
-git clone https://github.com/<org-or-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/SuyeshJadhav/CSC510_G19.git
+cd Project2/
 ````
 
 ### For Flutter frontend
@@ -32,8 +31,6 @@ flutter run -d chrome
 pip install -r requirements.txt
 ```
 
-Request Firebase credentials if needed.
-
 ---
 
 ## 4. Branching and Workflow
@@ -41,9 +38,9 @@ Request Firebase credentials if needed.
 | Type          | Example                                 |
 | ------------- | --------------------------------------- |
 | Main branch   | `main`                                  |
-| Frontend work | `frontend` or `feature/flutter-ui`      |
-| Backend work  | `backend` or `feature/firestore-schema` |
-| Fixes         | `fix/<issue>`                           |
+| Frontend work | `frontend`                              |
+| Backend work  | `backend`                               |
+| Docs          | `Documentation and readme updates`       |
 
 ### Create and push a feature branch
 
