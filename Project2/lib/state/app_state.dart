@@ -1,10 +1,10 @@
-// lib/state/app_state.dart
 import 'package:flutter/foundation.dart';
 
 class AppState extends ChangeNotifier {
   final Map<String, Map<String, int>> balances = {
     'MILK': {'allowed': 2, 'used': 0},
     'CEREAL': {'allowed': 3, 'used': 0},
+    'LEGUMES': {'allowed': 4, 'used': 0},
   };
 
   final List<Map<String, dynamic>> basket = [];
