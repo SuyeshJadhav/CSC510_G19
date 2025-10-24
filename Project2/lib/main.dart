@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';          
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'app_router.dart';
 import 'state/app_state.dart';
@@ -22,11 +22,8 @@ class MyApp extends StatelessWidget {
       create: (_) => AppState(),
       child: MaterialApp.router(
         title: 'Smart WIC Cart',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.teal,
-        ),
-        routerConfig: router,   // defined in lib/app_router.dart
+        theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
+        routerConfig: router,
       ),
     );
   }

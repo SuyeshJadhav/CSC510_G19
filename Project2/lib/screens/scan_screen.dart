@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -20,6 +19,14 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().loadBalances(docId: 'default');
+    });
+  }
+
+  @override
   void dispose() {
     _input.dispose();
     super.dispose();
@@ -27,6 +34,19 @@ class _ScanScreenState extends State<ScanScreen> {
 
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _diagnose() async {
+    const testUpc = '000000743266'; // change to one that exists
+    try {
+      final info = await _apl.findByUpc(testUpc);
+      if (!mounted) return;
+      _snack(info == null
+          ? 'Firestore MISSING: $testUpc'
+          : 'Firestore OK: $testUpc → ${info['name']}');
+    } catch (e) {
+      _snack('Firestore ERROR: $e');
+    }
+  }
 
   Future<void> _check(String code) async {
     final upc = code.trim();
@@ -84,12 +104,23 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final isMobile = !kIsWeb;
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Item')),
+      appBar: AppBar(
+        title: const Text('Scan Item'),
+        actions: [
+          IconButton(
+            tooltip: 'Run diagnostics',
+            icon: const Icon(Icons.bug_report_outlined),
+            onPressed: _diagnose,
+          ),
+        ],
+      ),
       body: isMobile
           ? MobileScanner(onDetect: (cap) {
-              final code = cap.barcodes.isNotEmpty ? cap.barcodes.first.rawValue : null;
+              final code = cap.barcodes.isNotEmpty
+                  ? cap.barcodes.first.rawValue
+                  : null;
               if (code != null) _check(code);
             })
           : Padding(
@@ -105,7 +136,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         child: TextField(
                           controller: _input,
                           decoration: const InputDecoration(
-                            hintText: '041196910045',
+                            hintText: '000000743266',
                             border: OutlineInputBorder(),
                           ),
                           onSubmitted: _check,
