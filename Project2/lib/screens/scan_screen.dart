@@ -1,126 +1,116 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:provider/provider.dart';
 
-import '../services/apl_service.dart';
-import '../state/app_state.dart';
-
+// 1. Convert to a StatefulWidget to manage the controller and detection state
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
+
   @override
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  final _apl = AplService();
-  final _input = TextEditingController();
-  String? _last;
-  bool _busy = false;
+  // 2. Create a controller for the scanner
+  final MobileScannerController controller = MobileScannerController(
+    // We are scanning barcodes, not just QR codes
+    formats: [BarcodeFormat.all],
+  );
 
+  // 3. Clean up the controller when the widget is removed
   @override
   void dispose() {
-    _input.dispose();
+    controller.dispose();
     super.dispose();
-  }
-
-  void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-
-  Future<void> _check(String code) async {
-    final upc = code.trim();
-    if (upc.isEmpty || upc == _last || _busy) return;
-    _last = upc;
-    _busy = true;
-    try {
-      final info = await _apl.findByUpc(upc);
-      if (!mounted) return;
-      if (info == null) {
-        _snack('Not found in APL');
-        return;
-      }
-      final eligible = info['eligible'] == true;
-      if (eligible) {
-        context.read<AppState>().addItem(
-              upc: upc,
-              name: info['name'] as String,
-              category: info['category'] as String,
-            );
-        _snack('WIC Approved ✅ ${info['name']}');
-      } else {
-        _snack('Not WIC Approved ❌');
-        final subs = await _apl.substitutes(info['category'] as String);
-        if (!mounted || subs.isEmpty) return;
-        showModalBottomSheet(
-          context: context,
-          builder: (_) => SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                const Text('Try these substitutes:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                ...subs.map((s) => ListTile(
-                      title: Text(s['name'] as String),
-                      trailing: const Icon(Icons.add),
-                      onTap: () {
-                        context.read<AppState>().addItem(
-                              upc: s['upc'] as String? ?? '',
-                              name: s['name'] as String,
-                              category: s['category'] as String,
-                            );
-                        Navigator.pop(context);
-                      },
-                    )),
-              ],
-            ),
-          ),
-        );
-      }
-    } finally {
-      _busy = false;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Item')),
-      body: isMobile
-          ? MobileScanner(onDetect: (cap) {
-              final code = cap.barcodes.isNotEmpty ? cap.barcodes.first.rawValue : null;
-              if (code != null) _check(code);
-            })
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Web demo: enter UPC'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _input,
-                          decoration: const InputDecoration(
-                            hintText: '041196910045',
-                            border: OutlineInputBorder(),
-                          ),
-                          onSubmitted: _check,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => _check(_input.text),
-                        child: const Text('Check'),
-                      ),
-                    ],
-                  ),
-                ],
+      appBar: AppBar(
+        title: const Text('Scan Barcode'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            onPressed: () => controller.toggleTorch(),
+            icon: const Icon(Icons.flash_on),
+          ),
+        ],
+      ),
+      // 1. Use SafeArea and Center to place everything in the middle
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Place barcode in the square',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
+              const SizedBox(height: 20),
+
+              // 2. Create a sized box to constrain the scanner
+              SizedBox(
+                width: 300, // You can change this size
+                height: 300, // You can change this size
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: MobileScanner(
+                    controller: controller,
+                    onDetect: (BarcodeCapture capture) {
+                      // Get the scanned barcode value
+                      final String? code = capture.barcodes.first.rawValue;
+
+                      if (code != null) {
+                        // Stop the camera
+                        controller.stop();
+
+                        // 3. Show the result dialog (same as before)
+                        showDialog<String>(
+                          // Expect a String to be returned
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext dialogContext) {
+                            return AlertDialog(
+                              title: const Text('Barcode Scanned'),
+                              content: Text('Scanned code: $code'),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('Scan Again'),
+                                  onPressed: () {
+                                    // 3. Pop the dialog, returning null
+                                    Navigator.of(dialogContext).pop();
+                                  },
+                                ),
+                                TextButton(
+                                  child: const Text('Use Code'),
+                                  onPressed: () {
+                                    // 4. Pop the dialog, returning the code
+                                    Navigator.of(dialogContext).pop(code);
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ).then((String? returnedCode) {
+                          // 5. This code runs AFTER the dialog is closed.
+                          if (returnedCode != null) {
+                            // User pressed "Use Code".
+                            // Now it's safe to pop the screen.
+                            Navigator.of(context).pop(returnedCode);
+                          } else {
+                            // User pressed "Scan Again".
+                            controller.start(); // Restart camera
+                          }
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
