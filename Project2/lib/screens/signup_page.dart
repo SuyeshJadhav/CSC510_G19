@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'home_screen.dart';
+import 'package:wolfbite/screens/scan_screen.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({Key? key}) : super(key: key);
@@ -34,8 +34,9 @@ class _SignupPageState extends State<SignupPage> {
                   children: [
                     TextFormField(
                       decoration: const InputDecoration(labelText: 'Full Name'),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Enter your name' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter your name'
+                          : null,
                       onSaved: (value) => _name = value!,
                     ),
                     const SizedBox(height: 16),
@@ -43,7 +44,9 @@ class _SignupPageState extends State<SignupPage> {
                       decoration: const InputDecoration(labelText: 'Email'),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) =>
-                          value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                          value == null || !value.contains('@')
+                          ? 'Enter a valid email'
+                          : null,
                       onSaved: (value) => _email = value!,
                     ),
                     const SizedBox(height: 16),
@@ -58,8 +61,9 @@ class _SignupPageState extends State<SignupPage> {
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(labelText: 'Address'),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Enter your address' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Enter your address'
+                          : null,
                       onSaved: (value) => _address = value!,
                     ),
                     const SizedBox(height: 24),
@@ -85,34 +89,34 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       // 1️⃣ Create user in Firebase Auth
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _email.trim(),
-        password: _password.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _email.trim(),
+            password: _password.trim(),
+          );
 
       // 2️⃣ Save user details in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
-        'name': _name,
-        'email': _email.trim(),
-        'address': _address,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+            'name': _name,
+            'email': _email.trim(),
+            'address': _address,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       // 3️⃣ Navigate to HomeScreen
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const ScanScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Signup Failed: ${e.message}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Signup Failed: ${e.message}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

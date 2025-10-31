@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // Import the Firebase Auth package
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';
+import 'package:wolfbite/screens/scan_screen.dart';
 import 'signup_page.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         // Check if the widget is still in the tree
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const ScanScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {

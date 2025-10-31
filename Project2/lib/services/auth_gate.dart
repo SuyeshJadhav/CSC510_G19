@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
-import 'login_screen.dart';
+import 'package:wolfbite/screens/login_screen.dart';
+import 'package:wolfbite/screens/scan_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -15,7 +15,7 @@ class AuthGate extends StatelessWidget {
         builder: (context, snapshot) {
           // 1. If the snapshot has user data, they are logged in
           if (snapshot.hasData) {
-            return const HomeScreen();
+            return const ScanScreen();
           }
           // 2. If the snapshot has no data, they are logged out
           else {
