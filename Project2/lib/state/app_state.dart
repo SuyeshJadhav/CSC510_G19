@@ -1,20 +1,20 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppState extends ChangeNotifier {
   final _db = FirebaseFirestore.instance;
+
   Map<String, Map<String, int>> balances = {
     'MILK': {'allowed': 2, 'used': 0},
     'CEREAL': {'allowed': 3, 'used': 0},
     'LEGUMES': {'allowed': 4, 'used': 0},
+    'FRUIT & VEGETABLE CVB': {'allowed': 5, 'used': 0},
   };
-
   final List<Map<String, dynamic>> basket = [];
 
   bool _balancesLoaded = false;
   bool get balancesLoaded => _balancesLoaded;
 
-  // We add a loading state for network activity
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -23,8 +23,6 @@ class AppState extends ChangeNotifier {
     return trimmed.toUpperCase();
   }
 
-  /// balances/<docId>, fields like:
-  ///   FRUIT & VEGETABLE CVB : {allowed: 8, used: 0}
   Future<void> loadBalances({String docId = 'default'}) async {
     if (_balancesLoaded) return;
     try {
@@ -39,7 +37,6 @@ class AppState extends ChangeNotifier {
           });
         });
       } else {
-        // If no doc, we just use the hardcoded defaults
         print('Balance doc not found, using default values.');
       }
     } catch (e) {
@@ -52,100 +49,124 @@ class AppState extends ChangeNotifier {
   bool canAdd(String categoryRaw) {
     final cat = _canon(categoryRaw);
     final cap = balances[cat];
-    if (cap == null) return true; // unknown category -> allow for MVP
+    // If not in balances, it's not a WIC item.
+    if (_balancesLoaded && cap == null) return false;
+    // If balances aren't loaded, allow it (for testing)
+    if (cap == null) return true;
     return (cap['used'] ?? 0) < (cap['allowed'] ?? 0);
   }
 
-  Future<void> addItem(String upc, {String balancesDocId = 'default'}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      // 1. Fetch the product from Firestore.
-      // We assume your collection is named 'apl' and the UPC is the doc ID.
-      final docSnap = await _db.collection('apl').doc(upc).get();
-
-      if (!docSnap.exists) {
-        print('Product with UPC $upc not found.');
-        // You can add a user-facing error message here
-      } else {
-        // 2. Extract data from the document
-        final data = docSnap.data() as Map<String, dynamic>;
-        final String name = data['name'] ?? 'Unknown Product';
-        final String category = data['category'] ?? 'Uncategorized';
-
-        // 3. Call the internal method to add the item to the basket
-        _addItemToBasket(
-          upc: upc,
-          name: name,
-          category: category,
-          balancesDocId: balancesDocId,
-        );
-      }
-    } catch (e) {
-      print('Error fetching product: $e');
-      // Handle error
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  void _addItemToBasket({
+  // --- THIS FUNCTION IS MODIFIED ---
+  // It now returns a bool:
+  // true = item was newly added
+  // false = item was incremented or not added
+  bool addItem({
     required String upc,
     required String name,
     required String category,
-    bool persistUsageToFirestore = true, // Defaulting to true
+    bool persistUsageToFirestore = true,
     String balancesDocId = 'default',
   }) {
+    if (upc.isEmpty) {
+      print("Error: Tried to add item with empty UPC.");
+      return false;
+    }
     final cat = _canon(category);
-    if (!canAdd(cat)) return;
-
-    final idx = basket.indexWhere((e) => e['upc'] == upc && upc.isNotEmpty);
-    if (idx >= 0) {
-      basket[idx]['qty'] = (basket[idx]['qty'] ?? 1) + 1;
-    } else {
-      basket.add({'upc': upc, 'name': name, 'category': cat, 'qty': 1});
+    if (!canAdd(cat)) {
+      return false; // Return false, limit reached
     }
 
+    final idx = basket.indexWhere((e) => e['upc'] == upc);
+
+    if (idx >= 0) {
+      // If item already exists, just increment it
+      incrementItem(upc);
+      return false; // 'false' means it was an increment
+    } else {
+      // It's a new item
+      basket.add({'upc': upc, 'name': name, 'category': cat, 'qty': 1});
+      if (balances.containsKey(cat)) {
+        balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
+        if (persistUsageToFirestore) {
+          _db.collection('balances').doc(balancesDocId).update({
+            '$cat.used': FieldValue.increment(1),
+          });
+        }
+      }
+      notifyListeners();
+      return true; // 'true' means it was a new item
+    }
+  }
+
+  void incrementItem(
+    String upc, {
+    bool persistUsageToFirestore = true,
+    String balancesDocId = 'default',
+  }) {
+    final i = basket.indexWhere((e) => e['upc'] == upc);
+    if (i < 0) return; // Item not in basket
+
+    final cat = _canon(basket[i]['category'] as String);
+    if (!canAdd(cat)) return; // Check WIC balance
+
+    // Increment quantity
+    basket[i]['qty'] = (basket[i]['qty'] ?? 1) + 1;
+
+    // Update WIC balance
     if (balances.containsKey(cat)) {
       balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
       if (persistUsageToFirestore) {
-        // This is a "fire-and-forget" update. We don't await it.
-        // It will update in the background.
         _db.collection('balances').doc(balancesDocId).update({
           '$cat.used': FieldValue.increment(1),
         });
       }
     }
+    notifyListeners();
   }
 
-  Future<void> removeItem(
+  Future<void> decrementItem(
     String upc, {
-    bool persistUsageToFirestore = false,
     String balancesDocId = 'default',
   }) async {
-    final i = basket.indexWhere((e) => e['upc'] == upc);
-    if (i < 0) return;
+    final index = basket.indexWhere((item) => item['upc'] == upc);
+    if (index == -1) return;
 
-    final cat = _canon(basket[i]['category'] as String);
+    final currentQty = basket[index]['qty'] as int;
+    final category = _canon(basket[index]['category'] as String);
 
-    if (balances.containsKey(cat)) {
-      final newUsed = (balances[cat]!['used'] ?? 0) - 1;
-      balances[cat]!['used'] = newUsed < 0 ? 0 : newUsed;
-      if (persistUsageToFirestore) {
+    if (currentQty > 1) {
+      // Decrement quantity
+      basket[index]['qty'] = currentQty - 1;
+    } else {
+      // Remove item if quantity would become 0
+      basket.removeAt(index);
+    }
+
+    if (balances.containsKey(category)) {
+      balances[category]!['used'] = (balances[category]!['used'] ?? 0) - 1;
+
+      try {
         await _db.collection('balances').doc(balancesDocId).update({
-          '$cat.used': FieldValue.increment(-1),
+          '$category.used': FieldValue.increment(-1),
         });
+      } catch (e) {
+        debugPrint('Error updating Firestore balance: $e');
       }
     }
 
-    final qty = (basket[i]['qty'] ?? 1) - 1;
-    if (qty <= 0) {
-      basket.removeAt(i);
-    } else {
-      basket[i]['qty']--;
-    }
     notifyListeners();
+
+    try {
+      final balanceRef = FirebaseFirestore.instance
+          .collection('balances')
+          .doc(balancesDocId);
+
+      await balanceRef.set({
+        'basket': basket,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating basket: $e');
+    }
   }
 }

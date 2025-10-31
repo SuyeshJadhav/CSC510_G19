@@ -1,116 +1,211 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 
-// 1. Convert to a StatefulWidget to manage the controller and detection state
+import '../services/apl_service.dart';
+import '../state/app_state.dart';
+
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
-
   @override
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  // 2. Create a controller for the scanner
-  final MobileScannerController controller = MobileScannerController(
-    // We are scanning barcodes, not just QR codes
-    formats: [BarcodeFormat.all],
-  );
+  final _apl = AplService();
+  final _input = TextEditingController();
+  String? _last;
+  bool _busy = false;
 
-  // 3. Clean up the controller when the widget is removed
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().loadBalances(docId: 'default');
+    });
+  }
+
   @override
   void dispose() {
-    controller.dispose();
+    _input.dispose();
     super.dispose();
+  }
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _diagnose() async {
+    const testUpc = '000000743266'; // change to one that exists
+    try {
+      final info = await _apl.findByUpc(testUpc);
+      if (!mounted) return;
+      _snack(
+        info == null
+            ? 'Firestore MISSING: $testUpc'
+            : 'Firestore OK: $testUpc → ${info['name']}',
+      );
+    } catch (e) {
+      _snack('Firestore ERROR: $e');
+    }
+  }
+
+  Future<void> _check(String code) async {
+    final upc = code.trim();
+    if (upc.isEmpty || upc == _last || _busy) return;
+    _last = upc;
+    _busy = true;
+    try {
+      final info = await _apl.findByUpc(upc);
+      if (!mounted) return;
+      if (info == null) {
+        _snack('Not found in APL');
+        return;
+      }
+      final eligible = info['eligible'] == true;
+      if (eligible) {
+        // It now uses the bool return value from your AppState's addItem
+        final bool isNewItem = context.read<AppState>().addItem(
+          upc: upc,
+          name: info['name'] as String,
+          category: info['category'] as String,
+        );
+
+        // Show the correct message based on the return value
+        if (isNewItem) {
+          _snack('WIC Approved ✅ ${info['name']}');
+        } else {
+          // Check if it failed because of WIC limits
+          final appState = context.read<AppState>();
+          final canAdd = appState.canAdd(info['category'] as String);
+          if (!canAdd) {
+            _snack('Limit reached for ${info['category']}');
+          } else {
+            _snack('Quantity updated ✅ ${info['name']}');
+          }
+        }
+        // After adding the item, pop the screen and return 'true'
+        // to signal success to the router.
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        _snack('Not WIC Approved ❌');
+        final subs = await _apl.substitutes(info['category'] as String);
+        if (!mounted || subs.isEmpty) return;
+        showModalBottomSheet(
+          context: context,
+          builder: (_) => SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                const Text(
+                  'Try these substitutes:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...subs.map(
+                  (s) => ListTile(
+                    title: Text(s['name'] as String),
+                    trailing: const Icon(Icons.add),
+                    onTap: () {
+                      context.read<AppState>().addItem(
+                        upc: s['upc'] as String? ?? '',
+                        name: s['name'] as String,
+                        category: s['category'] as String,
+                      );
+                      Navigator.pop(context);
+
+                      // Also pop the scan screen after adding a substitute
+                      if (mounted) Navigator.of(context).pop(true);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } finally {
+      _busy = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = !kIsWeb;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan Barcode'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('Scan Item'),
         actions: [
           IconButton(
-            onPressed: () => controller.toggleTorch(),
-            icon: const Icon(Icons.flash_on),
+            tooltip: 'Run diagnostics',
+            icon: const Icon(Icons.bug_report_outlined),
+            onPressed: _diagnose,
           ),
         ],
       ),
-      // 1. Use SafeArea and Center to place everything in the middle
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Place barcode in the square',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              // 2. Create a sized box to constrain the scanner
-              SizedBox(
-                width: 300, // You can change this size
-                height: 300, // You can change this size
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: MobileScanner(
-                    controller: controller,
-                    onDetect: (BarcodeCapture capture) {
-                      // Get the scanned barcode value
-                      final String? code = capture.barcodes.first.rawValue;
-
-                      if (code != null) {
-                        // Stop the camera
-                        controller.stop();
-
-                        // 3. Show the result dialog (same as before)
-                        showDialog<String>(
-                          // Expect a String to be returned
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext dialogContext) {
-                            return AlertDialog(
-                              title: const Text('Barcode Scanned'),
-                              content: Text('Scanned code: $code'),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: const Text('Scan Again'),
-                                  onPressed: () {
-                                    // 3. Pop the dialog, returning null
-                                    Navigator.of(dialogContext).pop();
-                                  },
-                                ),
-                                TextButton(
-                                  child: const Text('Use Code'),
-                                  onPressed: () {
-                                    // 4. Pop the dialog, returning the code
-                                    Navigator.of(dialogContext).pop(code);
-                                  },
-                                ),
-                              ],
-                            );
+      body: isMobile
+          ? SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Place barcode in the square',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // This SizedBox and ClipRRect create the square scanner UI
+                    SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: MobileScanner(
+                          onDetect: (cap) {
+                            final code = cap.barcodes.isNotEmpty
+                                ? cap.barcodes.first.rawValue
+                                : null;
+                            if (code != null) _check(code);
                           },
-                        ).then((String? returnedCode) {
-                          // 5. This code runs AFTER the dialog is closed.
-                          if (returnedCode != null) {
-                            // User pressed "Use Code".
-                            // Now it's safe to pop the screen.
-                            Navigator.of(context).pop(returnedCode);
-                          } else {
-                            // User pressed "Scan Again".
-                            controller.start(); // Restart camera
-                          }
-                        });
-                      }
-                    },
-                  ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : Padding(
+              // This is the web fallback, which is unchanged
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Web demo: enter UPC'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _input,
+                          decoration: const InputDecoration(
+                            hintText: '000000743266',
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: _check,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: () => _check(_input.text),
+                        child: const Text('Check'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
