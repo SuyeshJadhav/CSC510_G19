@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 // Import the Firebase Auth package
 import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';
+import 'signup_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,11 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
   // This is the new function to handle the login logic
   Future<void> _signIn() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please enter both email and password')),
-    );
-    return; // Stop the function
-  }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email and password')),
+      );
+      return; // Stop the function
+    }
     try {
       // Use the Firebase Auth instance to sign in
       await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -29,21 +30,22 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
       // If login is successful, print a success message
-     if (mounted) { // Check if the widget is still in the tree
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-    }
-
+      if (mounted) {
+        // Check if the widget is still in the tree
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       // If there's an error, print the error message
       if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Login Failed: ${e.message}')),
-    );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login Failed: ${e.message}')));
+      }
     }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,6 +83,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 minimumSize: const Size.fromHeight(50),
               ),
               child: const Text('Login'),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignupPage()),
+                );
+              },
+              child: const Text("Don't have an account? Sign Up"),
             ),
           ],
         ),

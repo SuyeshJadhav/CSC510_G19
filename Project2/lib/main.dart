@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // <- contains your Firebase config
-import 'login_screen.dart';
-import 'auth_gate.dart';
+import 'screens/login screens/login_screen.dart';
+import 'screens/login screens/auth_gate.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensures Flutter is ready
   await Firebase.initializeApp(
