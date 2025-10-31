@@ -22,7 +22,7 @@ class _ScanScreenState extends State<ScanScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AppState>().loadBalances(docId: 'default');
+      if (mounted) context.read<AppState>().loadBalances();
     });
   }
 
