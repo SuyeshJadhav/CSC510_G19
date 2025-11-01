@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // 1. IMPORT GOROUTER
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
@@ -64,18 +65,15 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final eligible = info['eligible'] == true;
       if (eligible) {
-        // It now uses the bool return value from your AppState's addItem
         final bool isNewItem = context.read<AppState>().addItem(
           upc: upc,
           name: info['name'] as String,
           category: info['category'] as String,
         );
 
-        // Show the correct message based on the return value
         if (isNewItem) {
           _snack('WIC Approved ✅ ${info['name']}');
         } else {
-          // Check if it failed because of WIC limits
           final appState = context.read<AppState>();
           final canAdd = appState.canAdd(info['category'] as String);
           if (!canAdd) {
@@ -84,9 +82,8 @@ class _ScanScreenState extends State<ScanScreen> {
             _snack('Quantity updated ✅ ${info['name']}');
           }
         }
-        // After adding the item, pop the screen and return 'true'
-        // to signal success to the router.
-        if (mounted) Navigator.of(context).pop(true);
+
+        if (mounted) context.pop(true);
       } else {
         _snack('Not WIC Approved ❌');
         final subs = await _apl.substitutes(info['category'] as String);
@@ -113,8 +110,8 @@ class _ScanScreenState extends State<ScanScreen> {
                       );
                       Navigator.pop(context);
 
-                      // Also pop the scan screen after adding a substitute
-                      if (mounted) Navigator.of(context).pop(true);
+                      // Also pop the scan screen itself, using GoRouter
+                      if (mounted) context.pop(true);
                     },
                   ),
                 ),
@@ -156,7 +153,6 @@ class _ScanScreenState extends State<ScanScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // This SizedBox and ClipRRect create the square scanner UI
                     SizedBox(
                       width: 300,
                       height: 300,
@@ -177,7 +173,6 @@ class _ScanScreenState extends State<ScanScreen> {
               ),
             )
           : Padding(
-              // This is the web fallback, which is unchanged
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
