@@ -1,151 +1,216 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppState extends ChangeNotifier {
   final _db = FirebaseFirestore.instance;
-  Map<String, Map<String, int>> balances = {
-    'MILK': {'allowed': 2, 'used': 0},
-    'CEREAL': {'allowed': 3, 'used': 0},
-    'LEGUMES': {'allowed': 4, 'used': 0},
-  };
 
-  final List<Map<String, dynamic>> basket = [];
+  Map<String, Map<String, int>> balances = {};
+  List<Map<String, dynamic>> basket = [];
+  String? _uid;
 
   bool _balancesLoaded = false;
   bool get balancesLoaded => _balancesLoaded;
 
-  // We add a loading state for network activity
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  /// A simple getter to check if the user is logged in.
+  /// The router will listen to this.
+  bool get isLoggedIn => _uid != null;
+
+  // Update user when auth state changes
+  void updateUser(User? user) {
+    _uid = user?.uid;
+
+    if (user != null) {
+      // Don't await here - let it load in the background
+      _balancesLoaded = false; // Reset the flag
+      loadBalances();
+    } else {
+      _clearState();
+    }
+
+    notifyListeners();
+  }
+
+  void _clearState() {
+    balances = {};
+    basket.clear();
+    _balancesLoaded = false;
+    _uid = null;
+  }
 
   String _canon(String raw) {
     final trimmed = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
     return trimmed.toUpperCase();
   }
 
-  /// balances/<docId>, fields like:
-  ///   FRUIT & VEGETABLE CVB : {allowed: 8, used: 0}
-  Future<void> loadBalances({String docId = 'default'}) async {
-    if (_balancesLoaded) return;
-    try {
-      final snap = await _db.collection('balances').doc(docId).get();
-      if (snap.exists) {
-        final data = Map<String, dynamic>.from(snap.data() ?? {});
-        balances = data.map((key, value) {
-          final v = (value as Map<String, dynamic>? ?? const {});
-          return MapEntry(_canon(key), {
-            'allowed': (v['allowed'] ?? 0) as int,
-            'used': (v['used'] ?? 0) as int,
-          });
-        });
-      } else {
-        // If no doc, we just use the hardcoded defaults
-        print('Balance doc not found, using default values.');
-      }
-    } catch (e) {
-      print('Error loading balances: $e');
+  Future<void> loadBalances() async {
+    if (_uid == null) {
+      _clearState();
+      return;
     }
-    _balancesLoaded = true;
-    notifyListeners();
+
+    if (_balancesLoaded) return;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final doc = await _db.collection('users').doc(_uid).get();
+
+      if (!doc.exists) {
+        await _createInitialBalances();
+        _balancesLoaded = true;
+        return;
+      }
+
+      final data = doc.data();
+      if (data != null) {
+        if (data['balances'] != null) {
+          balances = Map<String, Map<String, int>>.from(
+            (data['balances'] as Map).map(
+              (k, v) => MapEntry(k.toString(), Map<String, int>.from(v as Map)),
+            ),
+          );
+        }
+
+        if (data['basket'] != null) {
+          basket = List<Map<String, dynamic>>.from(data['basket']);
+        }
+      }
+
+      _balancesLoaded = true;
+    } catch (e) {
+      debugPrint('Error loading balances: $e');
+      _balancesLoaded = true;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _createInitialBalances() async {
+    if (_uid == null) return;
+
+    // These are the default WIC benefits for a new account
+    final defaultBalances = {
+      'MILK': {'allowed': 2, 'used': 0},
+      'CEREAL': {'allowed': 3, 'used': 0},
+      'LEGUMES': {'allowed': 4, 'used': 0},
+      'FRUIT & VEGETABLE CVB': {'allowed': 5, 'used': 0},
+    };
+
+    try {
+      await _db.collection('users').doc(_uid).set(
+        {
+          'balances': defaultBalances,
+          'basket': [],
+          'createdAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      ); // Use merge:true to avoid overwriting email, etc.
+
+      balances = defaultBalances;
+      basket.clear();
+    } catch (e) {
+      debugPrint('Error creating initial balances: $e');
+    }
   }
 
   bool canAdd(String categoryRaw) {
     final cat = _canon(categoryRaw);
     final cap = balances[cat];
-    if (cap == null) return true; // unknown category -> allow for MVP
+    if (_balancesLoaded && cap == null) return false;
+    if (cap == null) return true;
     return (cap['used'] ?? 0) < (cap['allowed'] ?? 0);
   }
 
-  Future<void> addItem(String upc, {String balancesDocId = 'default'}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      // 1. Fetch the product from Firestore.
-      // We assume your collection is named 'apl' and the UPC is the doc ID.
-      final docSnap = await _db.collection('apl').doc(upc).get();
-
-      if (!docSnap.exists) {
-        print('Product with UPC $upc not found.');
-        // You can add a user-facing error message here
-      } else {
-        // 2. Extract data from the document
-        final data = docSnap.data() as Map<String, dynamic>;
-        final String name = data['name'] ?? 'Unknown Product';
-        final String category = data['category'] ?? 'Uncategorized';
-
-        // 3. Call the internal method to add the item to the basket
-        _addItemToBasket(
-          upc: upc,
-          name: name,
-          category: category,
-          balancesDocId: balancesDocId,
-        );
-      }
-    } catch (e) {
-      print('Error fetching product: $e');
-      // Handle error
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  void _addItemToBasket({
+  bool addItem({
     required String upc,
     required String name,
     required String category,
-    bool persistUsageToFirestore = true, // Defaulting to true
-    String balancesDocId = 'default',
   }) {
-    final cat = _canon(category);
-    if (!canAdd(cat)) return;
+    if (_uid == null) return false;
+    if (upc.isEmpty) return false;
 
-    final idx = basket.indexWhere((e) => e['upc'] == upc && upc.isNotEmpty);
-    if (idx >= 0) {
-      basket[idx]['qty'] = (basket[idx]['qty'] ?? 1) + 1;
-    } else {
-      basket.add({'upc': upc, 'name': name, 'category': cat, 'qty': 1});
+    final cat = _canon(category);
+    final existingIndex = basket.indexWhere((item) => item['upc'] == upc);
+
+    if (existingIndex != -1) {
+      // Item already exists, call increment
+      incrementItem(upc);
+      return false; // 'false' means it was an increment
     }
+
+    if (!canAdd(cat)) return false; // Check limit for new item
+
+    basket.add({'upc': upc, 'name': name, 'category': cat, 'qty': 1});
 
     if (balances.containsKey(cat)) {
       balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
-      if (persistUsageToFirestore) {
-        // This is a "fire-and-forget" update. We don't await it.
-        // It will update in the background.
-        _db.collection('balances').doc(balancesDocId).update({
-          '$cat.used': FieldValue.increment(1),
-        });
-      }
     }
+
+    notifyListeners();
+    _updateFirestoreData(); // Save to database
+    return true; // 'true' means it was a new item
   }
 
-  Future<void> removeItem(
-    String upc, {
-    bool persistUsageToFirestore = false,
-    String balancesDocId = 'default',
-  }) async {
-    final i = basket.indexWhere((e) => e['upc'] == upc);
-    if (i < 0) return;
+  void incrementItem(String upc) {
+    if (_uid == null) return;
 
-    final cat = _canon(basket[i]['category'] as String);
+    final index = basket.indexWhere((item) => item['upc'] == upc);
+    if (index == -1) return;
 
-    if (balances.containsKey(cat)) {
-      final newUsed = (balances[cat]!['used'] ?? 0) - 1;
-      balances[cat]!['used'] = newUsed < 0 ? 0 : newUsed;
-      if (persistUsageToFirestore) {
-        await _db.collection('balances').doc(balancesDocId).update({
-          '$cat.used': FieldValue.increment(-1),
-        });
-      }
+    final category = _canon(basket[index]['category'] as String);
+
+    if (!canAdd(category)) return;
+
+    basket[index]['qty'] = (basket[index]['qty'] as int) + 1;
+
+    if (balances.containsKey(category)) {
+      balances[category]!['used'] = (balances[category]!['used'] ?? 0) + 1;
     }
 
-    final qty = (basket[i]['qty'] ?? 1) - 1;
-    if (qty <= 0) {
-      basket.removeAt(i);
-    } else {
-      basket[i]['qty']--;
-    }
     notifyListeners();
+    _updateFirestoreData(); // Save to database
+  }
+
+  Future<void> decrementItem(String upc) async {
+    if (_uid == null) return;
+
+    final index = basket.indexWhere((item) => item['upc'] == upc);
+    if (index == -1) return;
+
+    final currentQty = basket[index]['qty'] as int;
+    final category = _canon(basket[index]['category'] as String);
+
+    if (currentQty > 1) {
+      basket[index]['qty'] = currentQty - 1;
+    } else {
+      basket.removeAt(index);
+    }
+
+    if (balances.containsKey(category)) {
+      balances[category]!['used'] = (balances[category]!['used'] ?? 0) - 1;
+    }
+
+    notifyListeners();
+    await _updateFirestoreData(); // Save to database
+  }
+
+  Future<void> _updateFirestoreData() async {
+    if (_uid == null) return;
+
+    try {
+      await _db.collection('users').doc(_uid).set({
+        'basket': basket,
+        'balances': balances,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating Firestore: $e');
+    }
   }
 }
