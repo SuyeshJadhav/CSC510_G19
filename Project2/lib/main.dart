@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '/app_router.dart'; // router instance
 
 import 'firebase_options.dart';
+import 'firebase_options.dart';          
+import 'package:provider/provider.dart';
+import 'app_router.dart';
 import 'state/app_state.dart';
 
 Future<void> main() async {
