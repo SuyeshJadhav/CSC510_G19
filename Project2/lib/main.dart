@@ -44,11 +44,11 @@ class _MyAppState extends State<MyApp> {
           initialData: null,
         ),
         ChangeNotifierProxyProvider<User?, AppState>(
-          create: (_) => _appState,
+          create: (_) => AppState(),
           update: (context, user, appState) {
-            if (appState == null) throw Exception('AppState is null');
-            appState.updateUser(user);
-            return appState;
+            debugPrint('🔔 Auth state changed: user = ${user?.uid}');
+            appState?.updateUser(user);
+            return appState!;
           },
         ),
       ],

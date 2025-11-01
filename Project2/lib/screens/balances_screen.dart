@@ -9,9 +9,16 @@ class BalancesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
 
+    debugPrint(
+      '🖥️ BalancesScreen: balancesLoaded=${app.balancesLoaded}, count=${app.balances.length}',
+    );
+
     if (!app.balancesLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<AppState>().loadBalances();
+        if (context.mounted) {
+          debugPrint('🔄 Calling loadBalances from BalancesScreen');
+          context.read<AppState>().loadBalances();
+        }
       });
     }
 

@@ -79,7 +79,7 @@ class _ScanScreenState extends State<ScanScreen> {
           if (!canAdd) {
             _snack('Limit reached for ${info['category']}');
           } else {
-            _snack('Quantity updated ✅ ${info['name']}');
+            // _snack('Quantity updated ✅ ${info['name']}');
           }
         }
 
