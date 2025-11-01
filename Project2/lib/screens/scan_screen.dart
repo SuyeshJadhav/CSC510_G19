@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -20,6 +19,14 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().loadBalances();
+    });
+  }
+
+  @override
   void dispose() {
     _input.dispose();
     super.dispose();
@@ -27,6 +34,21 @@ class _ScanScreenState extends State<ScanScreen> {
 
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _diagnose() async {
+    const testUpc = '000000743266'; // change to one that exists
+    try {
+      final info = await _apl.findByUpc(testUpc);
+      if (!mounted) return;
+      _snack(
+        info == null
+            ? 'Firestore MISSING: $testUpc'
+            : 'Firestore OK: $testUpc → ${info['name']}',
+      );
+    } catch (e) {
+      _snack('Firestore ERROR: $e');
+    }
+  }
 
   Future<void> _check(String code) async {
     final upc = code.trim();
@@ -42,12 +64,29 @@ class _ScanScreenState extends State<ScanScreen> {
       }
       final eligible = info['eligible'] == true;
       if (eligible) {
-        context.read<AppState>().addItem(
-              upc: upc,
-              name: info['name'] as String,
-              category: info['category'] as String,
-            );
-        _snack('WIC Approved ✅ ${info['name']}');
+        // It now uses the bool return value from your AppState's addItem
+        final bool isNewItem = context.read<AppState>().addItem(
+          upc: upc,
+          name: info['name'] as String,
+          category: info['category'] as String,
+        );
+
+        // Show the correct message based on the return value
+        if (isNewItem) {
+          _snack('WIC Approved ✅ ${info['name']}');
+        } else {
+          // Check if it failed because of WIC limits
+          final appState = context.read<AppState>();
+          final canAdd = appState.canAdd(info['category'] as String);
+          if (!canAdd) {
+            _snack('Limit reached for ${info['category']}');
+          } else {
+            _snack('Quantity updated ✅ ${info['name']}');
+          }
+        }
+        // After adding the item, pop the screen and return 'true'
+        // to signal success to the router.
+        if (mounted) Navigator.of(context).pop(true);
       } else {
         _snack('Not WIC Approved ❌');
         final subs = await _apl.substitutes(info['category'] as String);
@@ -58,20 +97,27 @@ class _ScanScreenState extends State<ScanScreen> {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                const Text('Try these substitutes:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                ...subs.map((s) => ListTile(
-                      title: Text(s['name'] as String),
-                      trailing: const Icon(Icons.add),
-                      onTap: () {
-                        context.read<AppState>().addItem(
-                              upc: s['upc'] as String? ?? '',
-                              name: s['name'] as String,
-                              category: s['category'] as String,
-                            );
-                        Navigator.pop(context);
-                      },
-                    )),
+                const Text(
+                  'Try these substitutes:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...subs.map(
+                  (s) => ListTile(
+                    title: Text(s['name'] as String),
+                    trailing: const Icon(Icons.add),
+                    onTap: () {
+                      context.read<AppState>().addItem(
+                        upc: s['upc'] as String? ?? '',
+                        name: s['name'] as String,
+                        category: s['category'] as String,
+                      );
+                      Navigator.pop(context);
+
+                      // Also pop the scan screen after adding a substitute
+                      if (mounted) Navigator.of(context).pop(true);
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -84,15 +130,54 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final isMobile = !kIsWeb;
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan Item')),
+      appBar: AppBar(
+        title: const Text('Scan Item'),
+        actions: [
+          IconButton(
+            tooltip: 'Run diagnostics',
+            icon: const Icon(Icons.bug_report_outlined),
+            onPressed: _diagnose,
+          ),
+        ],
+      ),
       body: isMobile
-          ? MobileScanner(onDetect: (cap) {
-              final code = cap.barcodes.isNotEmpty ? cap.barcodes.first.rawValue : null;
-              if (code != null) _check(code);
-            })
+          ? SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Place barcode in the square',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // This SizedBox and ClipRRect create the square scanner UI
+                    SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: MobileScanner(
+                          onDetect: (cap) {
+                            final code = cap.barcodes.isNotEmpty
+                                ? cap.barcodes.first.rawValue
+                                : null;
+                            if (code != null) _check(code);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : Padding(
+              // This is the web fallback, which is unchanged
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +190,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         child: TextField(
                           controller: _input,
                           decoration: const InputDecoration(
-                            hintText: '041196910045',
+                            hintText: '000000743266',
                             border: OutlineInputBorder(),
                           ),
                           onSubmitted: _check,
