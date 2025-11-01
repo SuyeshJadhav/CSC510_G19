@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-// Import the Firebase Auth package
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'signup_page.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,33 +14,30 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // This is the new function to handle the login logic
   Future<void> _signIn() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter both email and password')),
       );
-      return; // Stop the function
+      return;
     }
     try {
-      // Use the Firebase Auth instance to sign in
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // If login is successful, print a success message
+
       if (mounted) {
-        // Check if the widget is still in the tree
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        // Navigate to scan screen after login
+        context.go('/scan');
       }
     } on FirebaseAuthException catch (e) {
-      // If there's an error, print the error message
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Login Failed: ${e.message}')));
+        ).showSnackBar(
+          SnackBar(content: Text('Login Failed: ${e.message}')),
+        );
       }
     }
   }
@@ -77,7 +73,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              // Call the _signIn function when the button is pressed
               onPressed: _signIn,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
