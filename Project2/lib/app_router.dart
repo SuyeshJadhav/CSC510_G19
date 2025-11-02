@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// Feature tabs
 import 'screens/scan_screen.dart';
 import 'screens/basket_screen.dart';
 import 'screens/balances_screen.dart';
-
-// Auth screens (note the subfolder)
 import 'screens/login screens/login_screen.dart';
 import 'screens/login screens/signup_page.dart';
 
@@ -128,7 +125,7 @@ final GoRouter router = GoRouter(
         /// - Usage progress bars
         /// - Account management (sign out)
         GoRoute(
-          path: '/benefits',
+          path: '/balances',
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: BalancesScreen()),
         ),
@@ -243,7 +240,7 @@ class _MainShell extends StatelessWidget {
   int _selectedIndexFor(String path) {
     if (path.startsWith('/scan')) return 0;
     if (path.startsWith('/basket')) return 1;
-    if (path.startsWith('/benefits')) return 2;
+    if (path.startsWith('/balances')) return 2;
     return 0; // Default to scan screen
   }
 
@@ -270,7 +267,7 @@ class _MainShell extends StatelessWidget {
         context.go('/basket');
         break;
       case 2:
-        context.go('/benefits');
+        context.go('/balances');
         break;
     }
   }
@@ -304,12 +301,9 @@ class _MainShell extends StatelessWidget {
             icon: Icon(Icons.qr_code_scanner),
             label: 'Scan',
           ),
+          NavigationDestination(icon: Icon(Icons.shopping_cart), label: 'Cart'),
           NavigationDestination(
-            icon: Icon(Icons.shopping_basket_outlined),
-            label: 'Basket',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
+            icon: Icon(Icons.account_balance_wallet),
             label: 'Benefits',
           ),
         ],

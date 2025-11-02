@@ -7,7 +7,7 @@ import 'firebase_options.dart';
 import 'app_router.dart';
 import 'state/app_state.dart';
 
-/// Main entry point for the WIC Shopping Assistant application.
+/// Main entry point for the WolfBite food delivery application.
 ///
 /// Initializes [Firebase] and sets up the app's dependency injection layer
 /// using [MultiProvider] from the `provider` package. This ensures:
@@ -17,22 +17,19 @@ import 'state/app_state.dart';
 ///
 /// The app uses [MaterialApp.router] with [GoRouter] for navigation,
 /// with auth guards configured in [router].
+///
+/// ## Initialization Steps:
+/// 1. Ensures Flutter engine is fully initialized via [WidgetsFlutterBinding.ensureInitialized]
+/// 2. Initializes Firebase with platform-specific options from [DefaultFirebaseOptions]
+/// 3. Starts the Flutter app with [MyApp] as the root widget
+///
+/// ## Side Effects:
+/// - Connects to Firebase project (Auth, Firestore)
+/// - Enables platform-specific features (camera, storage)
+/// - Configures dependency injection for the entire app
 Future<void> main() async {
-  /// Ensures Flutter engine is fully initialized before Firebase setup.
-  ///
-  /// Required for async operations in [main] and to access platform-specific
-  /// features (camera permissions, Firestore, etc.).
   WidgetsFlutterBinding.ensureInitialized();
-
-  /// Initializes Firebase with platform-specific options from [firebase_options.dart].
-  ///
-  /// This connects the app to your Firebase project and enables:
-  /// - [FirebaseAuth] for user authentication
-  /// - [FirebaseFirestore] for user balances and basket data
-  /// - [CloudStorage] if needed in future
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  /// Starts the Flutter app.
   runApp(const MyApp());
 }
 
@@ -44,9 +41,48 @@ Future<void> main() async {
 /// 3. Configures Material 3 theme with teal color scheme
 /// 4. Sets up [GoRouter] for navigation with auth guards
 ///
-/// All descendant widgets can access:
+/// ## Dependency Injection Structure
+///
+/// The provider hierarchy allows all descendant widgets to access:
 /// - Current [User] via `context.watch<User?>()`
 /// - [AppState] via `context.watch<AppState>()`
+///
+/// ## Provider Chain Details
+///
+/// ### StreamProvider<User?>
+/// Streams [FirebaseAuth] user changes to the widget tree. Listens to
+/// [FirebaseAuth.instance.authStateChanges()] which emits:
+/// - A [User] object when login succeeds
+/// - `null` when logout occurs
+/// - Initial state on app startup
+///
+/// The `initialData: null` ensures the app shows login screen before
+/// Firebase completes the first auth check.
+///
+/// ### ChangeNotifierProxyProvider<User?, AppState>
+/// Syncs [User] changes into [AppState] for app-wide state management.
+/// This creates a dependency relationship where [AppState] depends on
+/// [StreamProvider<User?>].
+///
+/// When [User] changes:
+/// 1. [AppState.updateUser] is called with the new [User]
+/// 2. [AppState] clears or loads data based on login/logout
+/// 3. All widgets watching [AppState] rebuild automatically
+///
+/// The `create` callback initializes [AppState] once on first build.
+/// The `update` callback runs whenever [User] changes.
+///
+/// ## Theme Configuration
+///
+/// Uses Material 3 design with teal as the primary color seed. The theme
+/// is automatically generated from [ColorScheme] based on the seed color.
+///
+/// ## Navigation Setup
+///
+/// Uses [MaterialApp.router] with [GoRouter] configured in [router] for:
+/// - Deep linking support
+/// - Auth-based route guards
+/// - Declarative navigation
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -58,16 +94,10 @@ class MyApp extends StatelessWidget {
         ///
         /// Listens to [FirebaseAuth.instance.authStateChanges()] which emits:
         /// - A [User] object when login succeeds
-        /// - null when logout occurs
+        /// - `null` when logout occurs
         /// - Initial state on app startup
         ///
-        /// The [initialData: null] ensures the app shows login screen
-        /// before Firebase completes the first auth check.
-        ///
-        /// Widgets can access this via:
-        /// ```dart
-        /// final user = context.watch<User?>();
-        /// ```
+        /// The `initialData: null` ensures proper loading state handling.
         StreamProvider<User?>(
           create: (_) => FirebaseAuth.instance.authStateChanges(),
           initialData: null,
@@ -75,9 +105,8 @@ class MyApp extends StatelessWidget {
 
         /// Syncs [User] changes into [AppState] for app-wide state management.
         ///
-        /// This [ChangeNotifierProxyProvider] creates a dependency relationship:
-        /// - Depends on: [StreamProvider<User?>] (the current user)
-        /// - Manages: [AppState] instance (user-scoped state)
+        /// Creates a dependency relationship where [AppState] depends on
+        /// [StreamProvider<User?>].
         ///
         /// When [User] changes:
         /// 1. [AppState.updateUser] is called with the new [User]
@@ -99,11 +128,6 @@ class MyApp extends StatelessWidget {
           },
         ),
       ],
-
-      /// Builds the app UI with Material 3 theme and GoRouter navigation.
-      ///
-      /// Uses [MaterialApp.router] instead of [MaterialApp] to integrate
-      /// [GoRouter] for deep linking and auth-based route guards.
       child: MaterialApp.router(
         title: 'Smart WIC Cart',
         theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),

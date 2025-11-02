@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
-/// Authentication screen for existing users to sign in.
+/// Login screen for user authentication using [FirebaseAuth].
 ///
-/// Provides email and password input fields with validation and calls
-/// [FirebaseAuth.signInWithEmailAndPassword] to authenticate. On successful
-/// login, the user is automatically redirected to [ScanScreen] via the
-/// [GoRouter] redirect logic in [app_router.dart].
-///
-/// Features:
-/// - Email and password text fields with validation
-/// - Error messages for invalid credentials
+/// Provides email/password authentication with:
+/// - Form validation for email and password
+/// - Password visibility toggle
 /// - Loading state during authentication
-/// - Link to [SignupPage] for new users
+/// - Error handling with [SnackBar] messages
+/// - Navigation to [SignupPage] for new users
 ///
-/// Usage: Navigated to via `/login` route (initial route for logged-out users).
+/// After successful login, navigates to `/scan` (main app).
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -24,67 +20,34 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  /// Form key for validation of email and password fields.
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  /// Controller for the email input field.
-  final _emailController = TextEditingController();
-
-  /// Controller for the password input field.
-  final _passwordController = TextEditingController();
-
-  /// Whether an authentication request is in progress.
-  ///
-  /// Used to disable the login button and show a loading indicator
-  /// during [FirebaseAuth.signInWithEmailAndPassword] calls.
+  bool _obscure = true;
   bool _loading = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  /// Validates form inputs and attempts to sign in via [FirebaseAuth].
+  /// Authenticates user with [FirebaseAuth] using email and password.
   ///
-  /// Steps:
-  /// 1. Validates form fields via [_formKey]
-  /// 2. Sets [_loading] to true and shows progress indicator
-  /// 3. Calls [FirebaseAuth.instance.signInWithEmailAndPassword]
-  /// 4. On success, user is redirected by [GoRouter] to `/scan`
-  /// 5. On failure, shows [SnackBar] with error message
+  /// Validates form inputs before attempting authentication.
+  /// On success, navigates to `/scan` screen.
+  /// On failure, displays error message via [SnackBar].
   ///
-  /// Side effects:
-  /// - Updates [_loading] state for UI feedback
-  /// - Navigates to [ScanScreen] on successful authentication
-  /// - Displays error messages via [ScaffoldMessenger]
+  /// Sets [_loading] state to show progress indicator during auth.
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _loading = true);
-
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: _email.text.trim(),
+        password: _password.text.trim(),
       );
-      // GoRouter redirect handles navigation automatically
+      if (!mounted) return;
+      context.go('/scan');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-
-      String message = 'Login failed';
-      if (e.code == 'user-not-found') {
-        message = 'No user found with this email';
-      } else if (e.code == 'wrong-password') {
-        message = 'Incorrect password';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email format';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -92,97 +55,91 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // App logo/icon
-                  Icon(
-                    Icons.shopping_cart,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Title
-                  Text(
-                    'WIC Shopping Assistant',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Email field
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.email),
+      backgroundColor: theme.colorScheme.surface,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text('Welcome back', style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sign in to continue',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password field
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Invalid email'
+                          : null,
                     ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Login button
-                  ElevatedButton(
-                    onPressed: _loading ? null : _signIn,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: _obscure,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _signIn(),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscure ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.length < 6) ? 'Min 6 chars' : null,
                     ),
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Sign In', style: TextStyle(fontSize: 16)),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Sign up link
-                  TextButton(
-                    onPressed: () => context.go('/signup'),
-                    child: const Text('Don\'t have an account? Sign up'),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _loading ? null : _signIn,
+                        child: _loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Sign In'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => context.go('/signup'),
+                      child: const Text('Create account'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
