@@ -50,20 +50,20 @@ class _ScanScreenState extends State<ScanScreen> {
   ///
   /// Uses test UPC `000000743266` to verify [AplService] can read from Firestore.
   /// Displays success or error message via [_snack].
-  Future<void> _diagnose() async {
-    const testUpc = '000000743266';
-    try {
-      final info = await _apl.findByUpc(testUpc);
-      if (!mounted) return;
-      _snack(
-        info == null
-            ? 'Firestore MISSING: $testUpc'
-            : 'Firestore OK: $testUpc → ${info['name']}',
-      );
-    } catch (e) {
-      _snack('Firestore ERROR: $e');
-    }
-  }
+  // Future<void> _diagnose() async {
+  //   const testUpc = '000000743266';
+  //   try {
+  //     final info = await _apl.findByUpc(testUpc);
+  //     if (!mounted) return;
+  //     _snack(
+  //       info == null
+  //           ? 'Firestore MISSING: $testUpc'
+  //           : 'Firestore OK: $testUpc → ${info['name']}',
+  //     );
+  //   } catch (e) {
+  //     _snack('Firestore ERROR: $e');
+  //   }
+  // }
 
   /// Checks WIC eligibility for the scanned/entered barcode.
   ///
@@ -121,13 +121,28 @@ class _ScanScreenState extends State<ScanScreen> {
     }
 
     final appState = context.read<AppState>();
+    final category = _lastInfo!['category'] ?? 'Unknown';
+
+    // Check if item can be added
+    if (!appState.canAdd(category)) {
+      _snack('Cannot add: Category limit reached');
+      return;
+    }
+
     appState.addItem(
       upc: _lastScanned ?? '',
       name: _lastInfo!['name'] ?? 'Unknown',
-      category: _lastInfo!['category'] ?? 'Unknown',
+      category: category,
     );
 
     _snack('Added ${_lastInfo!['name']} to basket');
+
+    // Clear the scanned item after adding
+    setState(() {
+      _lastScanned = null;
+      _lastInfo = null;
+      _input.clear();
+    });
   }
 
   /// Handles barcode detection from [MobileScanner].
@@ -144,20 +159,17 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final canAdd =
+        _lastInfo != null && appState.canAdd(_lastInfo!['category'] ?? '');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Product'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Test Firestore',
-            onPressed: _diagnose,
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               if (context.mounted) context.go('/login');
@@ -176,6 +188,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: Color(0xFFD1001C),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -184,7 +197,16 @@ class _ScanScreenState extends State<ScanScreen> {
                       height: 280,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: MobileScanner(onDetect: _onDetect),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(0xFFD1001C),
+                              width: 3,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: MobileScanner(onDetect: _onDetect),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -199,8 +221,13 @@ class _ScanScreenState extends State<ScanScreen> {
                         ),
                         const SizedBox(width: 12),
                         FilledButton(
-                          onPressed: _lastInfo != null ? _addToBasket : null,
-                          child: const Text('Add to Cart'),
+                          onPressed: canAdd ? _addToBasket : null,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: canAdd
+                                ? const Color(0xFFD1001C)
+                                : Colors.grey.shade300,
+                          ),
+                          child: const Text('Add to Basket'),
                         ),
                       ],
                     ),
@@ -218,10 +245,53 @@ class _ScanScreenState extends State<ScanScreen> {
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
+                                  color: Color(0xFFD1001C),
                                 ),
                               ),
-                              Text('Category: ${_lastInfo!['category']}'),
-                              Text('UPC: $_lastScanned'),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Category: ${_lastInfo!['category']}',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                              Text(
+                                'UPC: $_lastScanned',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (!canAdd) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade100,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 16,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Category limit reached',
+                                        style: TextStyle(
+                                          color: Colors.orange.shade700,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -231,60 +301,172 @@ class _ScanScreenState extends State<ScanScreen> {
                 ),
               ),
             )
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Enter UPC manually',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+          : SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Card(
+                    elevation: 4,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.qr_code_scanner,
+                            size: 64,
+                            color: const Color(0xFFD1001C),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _input,
-                          decoration: const InputDecoration(
-                            labelText: 'UPC Code',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Enter UPC Code',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD1001C),
+                            ),
                           ),
-                          onSubmitted: _checkEligibility,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: () => _checkEligibility(_input.text),
-                                child: const Text('Check'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Type the barcode number manually',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          TextField(
+                            controller: _input,
+                            decoration: InputDecoration(
+                              labelText: 'UPC Code',
+                              hintText: '000000000000',
+                              prefixIcon: const Icon(
+                                Icons.numbers,
+                                color: Color(0xFFD1001C),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1001C),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1001C),
+                                  width: 2,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: _lastInfo != null
-                                    ? _addToBasket
-                                    : null,
-                                child: const Text('Add'),
+                            keyboardType: TextInputType.number,
+                            maxLength: 13,
+                            onSubmitted: (value) {
+                              if (value.isNotEmpty) {
+                                _checkEligibility(value);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: () {
+                                    final upc = _input.text.trim();
+                                    if (upc.isNotEmpty) {
+                                      _checkEligibility(upc);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.search),
+                                  label: const Text('Check'),
+                                ),
+                              ),
+                              if (_lastInfo != null) ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: canAdd ? _addToBasket : null,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: canAdd
+                                          ? const Color(0xFFD1001C)
+                                          : Colors.grey.shade300,
+                                    ),
+                                    icon: const Icon(Icons.add_shopping_cart),
+                                    label: const Text('Add'),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (_lastInfo != null) ...[
+                            const SizedBox(height: 24),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFD1001C,
+                                ).withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFD1001C,
+                                  ).withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _lastInfo!['name'] ?? 'Unknown',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Color(0xFFD1001C),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Category: ${_lastInfo!['category']}',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  Text(
+                                    'UPC: $_lastScanned',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (!canAdd) ...[
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          size: 16,
+                                          color: Colors.orange.shade700,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Category limit reached',
+                                          style: TextStyle(
+                                            color: Colors.orange.shade700,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                        if (_lastInfo != null) ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            _lastInfo!['name'] ?? 'Unknown',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text('Category: ${_lastInfo!['category']}'),
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),

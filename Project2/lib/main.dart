@@ -104,7 +104,41 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'Smart WIC Cart',
-        theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFD1001C),
+            primary: const Color(0xFFD1001C),
+            secondary: const Color(0xFFD1001C),
+            surface: Colors.white,
+          ),
+          scaffoldBackgroundColor: Colors.white,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFD1001C),
+            foregroundColor: Colors.white,
+            elevation: 2,
+          ),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200, width: 1),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD1001C),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+          floatingActionButtonTheme: const FloatingActionButtonThemeData(
+            backgroundColor: Color(0xFFD1001C),
+            foregroundColor: Colors.white,
+          ),
+        ),
         routerConfig: router,
       ),
     );

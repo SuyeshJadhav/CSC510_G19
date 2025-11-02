@@ -36,7 +36,6 @@ class BasketScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Basket'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -56,7 +55,15 @@ class BasketScreen extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  color: Colors.blue.shade50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1001C).withValues(alpha: 0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: const Color(0xFFD1001C).withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -65,14 +72,25 @@ class BasketScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFFD1001C),
                         ),
                       ),
-                      Text(
-                        '$totalItems',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade700,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD1001C),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$totalItems',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -84,7 +102,7 @@ class BasketScreen extends StatelessWidget {
                     itemCount: basket.length,
                     itemBuilder: (context, index) {
                       final item = basket[index];
-                      return _BasketItemTile(item: item);
+                      return _BasketItem(item: item);
                     },
                   ),
                 ),
@@ -118,7 +136,7 @@ class BasketScreen extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
+          FilledButton.icon(
             onPressed: () => context.go('/scan'),
             icon: const Icon(Icons.qr_code_scanner),
             label: const Text('Start Scanning'),
@@ -139,8 +157,8 @@ class BasketScreen extends StatelessWidget {
 /// Provides increment/decrement buttons that call [AppState.incrementItem]
 /// and [AppState.decrementItem] respectively. Buttons are styled with
 /// visual feedback and disabled states based on category limits.
-class _BasketItemTile extends StatelessWidget {
-  const _BasketItemTile({required this.item});
+class _BasketItem extends StatelessWidget {
+  const _BasketItem({required this.item});
 
   /// The basket item data map containing 'upc', 'name', 'category', and 'qty'.
   final Map<String, dynamic> item;
@@ -158,12 +176,12 @@ class _BasketItemTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade100,
+          backgroundColor: const Color(0xFFD1001C).withValues(alpha: 0.1),
           child: Text(
             qty.toString(),
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.blue.shade700,
+              color: Color(0xFFD1001C),
             ),
           ),
         ),
@@ -175,7 +193,7 @@ class _BasketItemTile extends StatelessWidget {
             // Decrement button
             IconButton(
               icon: const Icon(Icons.remove_circle_outline),
-              color: Colors.red.shade400,
+              color: const Color(0xFFD1001C),
               onPressed: () => appState.decrementItem(upc),
               tooltip: 'Remove one',
             ),
@@ -183,7 +201,7 @@ class _BasketItemTile extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.add_circle_outline,
-                color: canAdd ? Colors.green.shade400 : Colors.grey.shade300,
+                color: canAdd ? const Color(0xFFD1001C) : Colors.grey.shade300,
               ),
               onPressed: canAdd ? () => appState.incrementItem(upc) : null,
               tooltip: canAdd ? 'Add one' : 'Category limit reached',

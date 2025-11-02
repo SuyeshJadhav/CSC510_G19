@@ -47,7 +47,6 @@ class BalancesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('WIC Benefits'),
-        centerTitle: true,
         actions: [
           // Sign out button
           IconButton(
@@ -145,10 +144,7 @@ class BalancesScreen extends StatelessWidget {
 class _BalanceCard extends StatelessWidget {
   const _BalanceCard({required this.category, required this.data});
 
-  /// The canonical category name (uppercase).
   final String category;
-
-  /// Balance data map with 'allowed' and 'used' keys from [AppState.balances].
   final Map<String, dynamic> data;
 
   /// Calculates the color for the progress bar based on usage percentage.
@@ -160,11 +156,11 @@ class _BalanceCard extends StatelessWidget {
   ///
   /// For unlimited categories (allowed is null), always returns green.
   Color _getProgressColor(int? allowed, int used) {
-    if (allowed == null) return Colors.green;
+    if (allowed == null) return const Color(0xFFD1001C);
     final pct = used / allowed;
-    if (pct < 0.6) return Colors.green;
-    if (pct < 0.85) return Colors.orange;
-    return Colors.red;
+    if (pct < 0.6) return const Color(0xFFD1001C);
+    if (pct < 0.85) return Colors.orange.shade600;
+    return Colors.red.shade700;
   }
 
   @override
@@ -192,6 +188,7 @@ class _BalanceCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFFD1001C),
                     ),
                   ),
                 ),
@@ -202,14 +199,14 @@ class _BalanceCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: const Color(0xFFD1001C).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
+                    child: const Text(
                       'Unlimited',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.green.shade700,
+                        color: Color(0xFFD1001C),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
