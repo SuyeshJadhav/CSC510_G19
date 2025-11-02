@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:wolfbite/screens/login_screen.dart';
+import 'package:wolfbite/screens/signup_page.dart';
 
 import 'screens/scan_screen.dart';
 import 'screens/basket_screen.dart';
 import 'screens/balances_screen.dart';
-import 'screens/login screens/login_screen.dart';
-import 'screens/login screens/signup_page.dart';
 
 /// Listenable wrapper for Firebase auth state changes.
 ///
