@@ -22,7 +22,7 @@ jobs:
     # Your file had 'Project2', which can fail on case-sensitive systems
     defaults:
       run:
-        working-directory: ./project2 
+        working-directory: ./Project2 
 
     steps:
       - name: Checkout code
@@ -67,11 +67,11 @@ jobs:
           
       - name: Install dependencies
         run: flutter pub get
-        working-directory: ./project2 # Run in your project folder
+        working-directory: ./Project2 # Run in your project folder
 
       - name: Generate docs
         run: dart doc .
-        working-directory: ./project2 # Run in your project folder
+        working-directory: ./Project2 # Run in your project folder
         
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
