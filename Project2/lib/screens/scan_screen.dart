@@ -50,20 +50,20 @@ class _ScanScreenState extends State<ScanScreen> {
   ///
   /// Uses test UPC `000000743266` to verify [AplService] can read from Firestore.
   /// Displays success or error message via [_snack].
-  Future<void> _diagnose() async {
-    const testUpc = '000000743266';
-    try {
-      final info = await _apl.findByUpc(testUpc);
-      if (!mounted) return;
-      _snack(
-        info == null
-            ? 'Firestore MISSING: $testUpc'
-            : 'Firestore OK: $testUpc → ${info['name']}',
-      );
-    } catch (e) {
-      _snack('Firestore ERROR: $e');
-    }
-  }
+  // Future<void> _diagnose() async {
+  //   const testUpc = '000000743266';
+  //   try {
+  //     final info = await _apl.findByUpc(testUpc);
+  //     if (!mounted) return;
+  //     _snack(
+  //       info == null
+  //           ? 'Firestore MISSING: $testUpc'
+  //           : 'Firestore OK: $testUpc → ${info['name']}',
+  //     );
+  //   } catch (e) {
+  //     _snack('Firestore ERROR: $e');
+  //   }
+  // }
 
   /// Checks WIC eligibility for the scanned/entered barcode.
   ///
