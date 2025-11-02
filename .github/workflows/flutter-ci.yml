@@ -77,7 +77,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # dart doc generates files in 'doc/api'
-          path: ./project2/doc/api 
+          path: ./Project2/doc/api 
 
       - name: Deploy to GitHub Pages
         id: deployment
