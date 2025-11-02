@@ -26,7 +26,7 @@ jobs:
       - run: flutter pub get
 
       # Step 4: Check if the code is formatted correctly.
-      - run: flutter format --output=none --set-exit-if-changed .
+      - run: dart format --output=none --set-exit-if-changed .
 
       # Step 5: Analyze the code for potential bugs and style issues.
       - run: flutter analyze
