@@ -56,10 +56,10 @@ class BasketScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD1001C).withOpacity(0.1),
+                    color: const Color(0xFFD1001C).withValues(alpha:0.1),
                     border: Border(
                       bottom: BorderSide(
-                        color: const Color(0xFFD1001C).withOpacity(0.2),
+                        color: const Color(0xFFD1001C).withValues(alpha:0.2),
                         width: 1,
                       ),
                     ),
@@ -176,7 +176,7 @@ class _BasketItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: const Color(0xFFD1001C).withOpacity(0.1),
+          backgroundColor: const Color(0xFFD1001C).withValues(alpha:0.1),
           child: Text(
             qty.toString(),
             style: const TextStyle(

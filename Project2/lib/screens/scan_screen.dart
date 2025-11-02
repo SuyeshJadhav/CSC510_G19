@@ -407,12 +407,12 @@ class _ScanScreenState extends State<ScanScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(
                                   0xFFD1001C,
-                                ).withValues(alpha: 0.05),
+                                ).withValues(alpha:0.05),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: const Color(
                                     0xFFD1001C,
-                                  ).withValues(alpha: 0.2),
+                                  ).withValues(alpha:0.2),
                                 ),
                               ),
                               child: Column(
