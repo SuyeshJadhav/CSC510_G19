@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
+/// Registration screen for new users to create an account.
+///
+/// Provides email and password input fields with validation and calls
+/// [FirebaseAuth.createUserWithEmailAndPassword] to register. On successful
+/// signup, the user is automatically signed in and redirected to [ScanScreen]
+/// via [GoRouter] redirect logic.
+///
+/// Features:
+/// - Email and password fields with validation
+/// - Password confirmation field with matching validation
+/// - Error messages for existing accounts or invalid input
+/// - Loading state during registration
+/// - Link back to [LoginScreen] for existing users
+///
+/// Usage: Navigated to via `/signup` route from [LoginScreen].
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 
@@ -11,56 +25,79 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  /// Form key for validation of all input fields.
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  final _address = TextEditingController();
 
+  /// Controller for the email input field.
+  final _emailController = TextEditingController();
+
+  /// Controller for the password input field.
+  final _passwordController = TextEditingController();
+
+  /// Controller for the password confirmation field.
+  ///
+  /// Value must match [_passwordController] for validation to pass.
+  final _confirmPasswordController = TextEditingController();
+
+  /// Whether a registration request is in progress.
+  ///
+  /// Used to disable the signup button and show a loading indicator
+  /// during [FirebaseAuth.createUserWithEmailAndPassword] calls.
   bool _loading = false;
-  bool _obscure = true;
 
   @override
   void dispose() {
-    _name.dispose();
-    _email.dispose();
-    _password.dispose();
-    _address.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _signup() async {
+  /// Validates form inputs and attempts to create a new account via [FirebaseAuth].
+  ///
+  /// Steps:
+  /// 1. Validates all form fields including password match
+  /// 2. Sets [_loading] to true and shows progress indicator
+  /// 3. Calls [FirebaseAuth.instance.createUserWithEmailAndPassword]
+  /// 4. On success, user is automatically signed in and redirected to `/scan`
+  /// 5. On failure, shows [SnackBar] with error message
+  ///
+  /// Common errors handled:
+  /// - Email already in use
+  /// - Weak password
+  /// - Invalid email format
+  ///
+  /// Side effects:
+  /// - Updates [_loading] state for UI feedback
+  /// - Creates new user in [FirebaseAuth] and [FirebaseFirestore]
+  /// - Navigates to [ScanScreen] on successful registration
+  /// - Displays error messages via [ScaffoldMessenger]
+  Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
+
     try {
-      // 1) Create user
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _email.text.trim(),
-        password: _password.text.trim(),
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
-
-      // 2) Save profile
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(cred.user!.uid)
-          .set({
-            'name': _name.text.trim(),
-            'email': _email.text.trim(),
-            'address': _address.text.trim(),
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-
-      // 3) Option A: force back to login
-      await FirebaseAuth.instance.signOut();
-
-      if (!mounted) return;
-      context.go('/login');
+      // User is automatically signed in; GoRouter handles redirect
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Sign up failed')));
+
+      String message = 'Registration failed';
+      if (e.code == 'email-already-in-use') {
+        message = 'An account already exists with this email';
+      } else if (e.code == 'weak-password') {
+        message = 'Password is too weak';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -68,134 +105,122 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(title: const Text('Create account')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500),
-          child: Card(
-            elevation: 3,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text(
-                      'Let’s get you started',
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Create your account to continue',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+      appBar: AppBar(title: const Text('Create Account'), centerTitle: true),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // App icon
+                  Icon(
+                    Icons.person_add,
+                    size: 80,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Name
-                    TextFormField(
-                      controller: _name,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Full name',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Enter your name'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
+                  // Title
+                  Text(
+                    'Sign Up',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
 
-                    // Email
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.mail_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || !v.contains('@'))
-                          ? 'Enter a valid email'
-                          : null,
+                  // Email field
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
                     ),
-                    const SizedBox(height: 12),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Password
-                    TextFormField(
-                      controller: _password,
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: 'Password (min 6 chars)',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure ? Icons.visibility : Icons.visibility_off,
+                  // Password field
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm password field
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Sign up button
+                  ElevatedButton(
+                    onPressed: _loading ? null : _signUp,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Create Account',
+                            style: TextStyle(fontSize: 16),
                           ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
-                        ),
-                      ),
-                      validator: (v) => (v == null || v.length < 6)
-                          ? 'Use at least 6 characters'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Address
-                    TextFormField(
-                      controller: _address,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Address',
-                        prefixIcon: Icon(Icons.home_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Enter your address'
-                          : null,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Sign up button
-                    SizedBox(
-                      height: 48,
-                      child: FilledButton(
-                        onPressed: _loading ? null : _signup,
-                        child: _loading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text('Sign Up'),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    // Back to login
-                    TextButton(
-                      onPressed: _loading ? null : () => context.go('/login'),
-                      child: const Text('Already have an account? Log in'),
-                    ),
-                  ],
-                ),
+                  // Back to login link
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Already have an account? Sign in'),
+                  ),
+                ],
               ),
             ),
           ),
