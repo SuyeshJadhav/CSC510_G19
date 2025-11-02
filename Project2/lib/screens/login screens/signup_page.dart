@@ -45,11 +45,11 @@ class _SignupPageState extends State<SignupPage> {
           .collection('users')
           .doc(cred.user!.uid)
           .set({
-        'name': _name.text.trim(),
-        'email': _email.text.trim(),
-        'address': _address.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+            'name': _name.text.trim(),
+            'email': _email.text.trim(),
+            'address': _address.text.trim(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       // 3) Option A: force back to login
       await FirebaseAuth.instance.signOut();
@@ -58,9 +58,9 @@ class _SignupPageState extends State<SignupPage> {
       context.go('/login');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Sign up failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Sign up failed')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -78,7 +78,9 @@ class _SignupPageState extends State<SignupPage> {
           constraints: const BoxConstraints(maxWidth: 500),
           child: Card(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Form(
@@ -87,7 +89,10 @@ class _SignupPageState extends State<SignupPage> {
                   shrinkWrap: true,
                   children: [
                     const SizedBox(height: 8),
-                    Text('Let’s get you started', style: theme.textTheme.headlineSmall),
+                    Text(
+                      'Let’s get you started',
+                      style: theme.textTheme.headlineSmall,
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Create your account to continue',
@@ -106,8 +111,9 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: Icon(Icons.person_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your name'
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -121,8 +127,9 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: Icon(Icons.mail_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Enter a valid email'
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -136,13 +143,16 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                          icon: Icon(
+                            _obscure ? Icons.visibility : Icons.visibility_off,
+                          ),
                           onPressed: () => setState(() => _obscure = !_obscure),
                           tooltip: _obscure ? 'Show password' : 'Hide password',
                         ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.length < 6) ? 'Use at least 6 characters' : null,
+                      validator: (v) => (v == null || v.length < 6)
+                          ? 'Use at least 6 characters'
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -155,8 +165,9 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: Icon(Icons.home_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your address' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your address'
+                          : null,
                     ),
                     const SizedBox(height: 20),
 
@@ -169,7 +180,9 @@ class _SignupPageState extends State<SignupPage> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Sign Up'),
                       ),

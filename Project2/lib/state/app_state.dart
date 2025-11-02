@@ -126,8 +126,9 @@ class AppState extends ChangeNotifier {
         final b = (data['balances'] as Map?) ?? {};
         balances = b.map((k, v) {
           final key = _canon(k.toString());
-          final allowed =
-              (v is Map && v['allowed'] is int) ? v['allowed'] as int : null;
+          final allowed = (v is Map && v['allowed'] is int)
+              ? v['allowed'] as int
+              : null;
           final used = (v is Map && v['used'] is int) ? v['used'] as int : 0;
           return MapEntry(key, {'allowed': allowed, 'used': used});
         });
@@ -136,12 +137,16 @@ class AppState extends ChangeNotifier {
         final raw = (data['basket'] as List?) ?? [];
         basket
           ..clear()
-          ..addAll(raw.whereType<Map>().map((m) => {
+          ..addAll(
+            raw.whereType<Map>().map(
+              (m) => {
                 'upc': (m['upc'] ?? '').toString(),
                 'name': (m['name'] ?? '').toString(),
                 'category': _canon((m['category'] ?? '').toString()),
                 'qty': (m['qty'] is int) ? m['qty'] as int : 1,
-              }));
+              },
+            ),
+          );
       }
     } finally {
       _balancesLoaded = true;
@@ -151,14 +156,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> _persist() async {
     if (_uid == null) return;
-    await _db.collection('users').doc(_uid).set(
-      {
-        'balances': balances,
-        'basket': basket,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    await _db.collection('users').doc(_uid).set({
+      'balances': balances,
+      'basket': basket,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   // ---------- Public API used by screens ----------
@@ -168,7 +170,7 @@ class AppState extends ChangeNotifier {
     final cat = _canon(categoryRaw);
     if (!balances.containsKey(cat)) return true; // first time seen -> allowed
     return _canAddCanon(cat);
-    }
+  }
 
   /// Add one item. Returns `true` if this created a new basket line, `false`
   /// if it only incremented an existing line. Persists in the background.

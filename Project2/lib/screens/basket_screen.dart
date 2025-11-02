@@ -17,15 +17,15 @@ class BasketScreen extends StatelessWidget {
         title: const Text('My Basket'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-    IconButton(
-      icon: const Icon(Icons.logout),
-      tooltip: 'Log out',
-      onPressed: () async {
-        await FirebaseAuth.instance.signOut();
-        if (context.mounted) context.go('/login');
-      },
-    ),
-  ],
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) context.go('/login');
+            },
+          ),
+        ],
       ),
       body: app.basket.isEmpty
           ? Center(

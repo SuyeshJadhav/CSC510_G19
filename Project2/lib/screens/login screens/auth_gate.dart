@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'package:wolfbite/screens/scan_screen.dart';
+
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
