@@ -28,9 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
       context.go('/scan'); // Go to main app
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Login failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -47,7 +47,9 @@ class _LoginScreenState extends State<LoginScreen> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: Card(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Form(
@@ -75,8 +77,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icon(Icons.mail_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your email' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your email'
+                          : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -89,12 +92,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                          icon: Icon(
+                            _obscure ? Icons.visibility : Icons.visibility_off,
+                          ),
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Enter your password' : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Enter your password'
+                          : null,
                     ),
                     const SizedBox(height: 20),
 
@@ -106,7 +112,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _loading ? null : _signIn,
                         child: _loading
                             ? const SizedBox(
-                                width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
                             : const Text('Login'),
                       ),
                     ),
@@ -115,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Signup link
                     TextButton(
-                      onPressed: _loading ? null : () => context.push('/signup'),
+                      onPressed: _loading
+                          ? null
+                          : () => context.push('/signup'),
                       child: const Text("Don't have an account? Sign up"),
                     ),
 

@@ -15,14 +15,8 @@ final GoRouter router = GoRouter(
   initialLocation: '/login',
   routes: [
     // Auth routes
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
-    GoRoute(
-      path: '/signup',
-      builder: (context, state) => const SignupPage(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
 
     // Main shell with bottom nav (signed-in area)
     ShellRoute(

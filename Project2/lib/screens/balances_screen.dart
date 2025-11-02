@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class BalancesScreen extends StatelessWidget {
   const BalancesScreen({super.key});
@@ -21,6 +23,16 @@ class BalancesScreen extends StatelessWidget {
         backgroundColor: Colors.red.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) context.go('/login');
+            },
+          ),
+        ],
       ),
       body: !app.balancesLoaded
           ? const Center(child: CircularProgressIndicator(color: Colors.red))
@@ -110,10 +122,10 @@ class BalancesScreen extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: statusColor.withOpacity(0.3),
+                              color: statusColor.withValues(alpha: 0.3),
                               width: 1,
                             ),
                           ),
@@ -216,9 +228,9 @@ class BalancesScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         children: [

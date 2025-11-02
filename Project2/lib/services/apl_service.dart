@@ -9,7 +9,10 @@ class AplService {
     return doc.data();
   }
 
-  Future<List<Map<String, dynamic>>> substitutes(String category, {int max = 3}) async {
+  Future<List<Map<String, dynamic>>> substitutes(
+    String category, {
+    int max = 3,
+  }) async {
     final query = await _db
         .collection('apl')
         .where('category', isEqualTo: category)

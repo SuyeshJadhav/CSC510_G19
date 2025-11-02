@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/apl_service.dart';
 import '../state/app_state.dart';
 
@@ -49,9 +49,11 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       final info = await _apl.findByUpc(testUpc);
       if (!mounted) return;
-      _snack(info == null
-          ? 'Firestore MISSING: $testUpc'
-          : 'Firestore OK: $testUpc → ${info['name']}');
+      _snack(
+        info == null
+            ? 'Firestore MISSING: $testUpc'
+            : 'Firestore OK: $testUpc → ${info['name']}',
+      );
     } catch (e) {
       _snack('Firestore ERROR: $e');
     }
@@ -99,21 +101,25 @@ class _ScanScreenState extends State<ScanScreen> {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                const Text('Try these substitutes:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                ...subs.map((s) => ListTile(
-                      title: Text((s['name'] ?? '') as String),
-                      trailing: const Icon(Icons.add),
-                      onTap: () {
-                        context.read<AppState>().addItem(
-                              upc: (s['upc'] ?? '') as String,
-                              name: (s['name'] ?? '') as String,
-                              category: (s['category'] ?? '') as String,
-                            );
-                        Navigator.pop(context);
-                        context.go('/basket');
-                      },
-                    )),
+                const Text(
+                  'Try these substitutes:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...subs.map(
+                  (s) => ListTile(
+                    title: Text((s['name'] ?? '') as String),
+                    trailing: const Icon(Icons.add),
+                    onTap: () {
+                      context.read<AppState>().addItem(
+                        upc: (s['upc'] ?? '') as String,
+                        name: (s['name'] ?? '') as String,
+                        category: (s['category'] ?? '') as String,
+                      );
+                      Navigator.pop(context);
+                      context.go('/basket');
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -132,10 +138,10 @@ class _ScanScreenState extends State<ScanScreen> {
     }
     final info = _lastInfo!;
     context.read<AppState>().addItem(
-          upc: (info['upc'] ?? '') as String,
-          name: (info['name'] ?? '') as String,
-          category: (info['category'] ?? '') as String,
-        );
+      upc: (info['upc'] ?? '') as String,
+      name: (info['name'] ?? '') as String,
+      category: (info['category'] ?? '') as String,
+    );
     _snack('✅ Added: ${info['name']}');
     context.go('/basket');
   }
@@ -162,6 +168,14 @@ class _ScanScreenState extends State<ScanScreen> {
             icon: const Icon(Icons.bug_report_outlined),
             onPressed: _diagnose,
           ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) context.go('/login');
+            },
+          ),
         ],
       ),
       body: isMobile
@@ -172,7 +186,10 @@ class _ScanScreenState extends State<ScanScreen> {
                   children: [
                     const Text(
                       'Place barcode inside the square',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -188,7 +205,9 @@ class _ScanScreenState extends State<ScanScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         FilledButton(
-                          onPressed: (_lastInfo != null) ? () => _checkEligibility(_lastScanned ?? '') : null,
+                          onPressed: (_lastInfo != null)
+                              ? () => _checkEligibility(_lastScanned ?? '')
+                              : null,
                           child: const Text('Re-check'),
                         ),
                         const SizedBox(width: 12),
@@ -240,8 +259,10 @@ class _ScanScreenState extends State<ScanScreen> {
                       margin: const EdgeInsets.only(top: 4),
                       child: ListTile(
                         title: Text((_lastInfo!['name'] ?? '') as String),
-                        subtitle: Text('UPC: ${_lastInfo!['upc'] ?? ''} • '
-                            'Category: ${_lastInfo!['category'] ?? ''}'),
+                        subtitle: Text(
+                          'UPC: ${_lastInfo!['upc'] ?? ''} • '
+                          'Category: ${_lastInfo!['category'] ?? ''}',
+                        ),
                         trailing: _lastEligible
                             ? const Icon(Icons.verified, color: Colors.green)
                             : const Icon(Icons.block, color: Colors.red),

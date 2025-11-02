@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 
 class BasketScreen extends StatelessWidget {
   const BasketScreen({super.key});
@@ -14,6 +16,16 @@ class BasketScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Basket'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) context.go('/login');
+            },
+          ),
+        ],
       ),
       body: app.basket.isEmpty
           ? Center(
