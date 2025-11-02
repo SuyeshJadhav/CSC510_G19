@@ -199,7 +199,7 @@ class _BalanceCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD1001C).withValues(alpha:0.1),
+                      color: const Color(0xFFD1001C).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
