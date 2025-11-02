@@ -1,216 +1,253 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Central app state: user-scoped balances (caps) + basket, persisted to Firestore.
+/// APL documents do NOT carry caps. Caps are derived here unless the user doc
+/// already specifies them.
 class AppState extends ChangeNotifier {
   final _db = FirebaseFirestore.instance;
 
-  Map<String, Map<String, int>> balances = {};
-  List<Map<String, dynamic>> basket = [];
-  String? _uid;
+  // ---------- Reactive data ----------
+  // balances: { CANON_CAT : { 'allowed': int? (null = uncapped), 'used': int } }
+  Map<String, Map<String, dynamic>> balances = {};
+  final List<Map<String, dynamic>> basket = [];
 
+  // ---------- Auth/user ----------
+  String? _uid;
   bool _balancesLoaded = false;
   bool get balancesLoaded => _balancesLoaded;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  /// A simple getter to check if the user is logged in.
-  /// The router will listen to this.
-  bool get isLoggedIn => _uid != null;
-
-  // Update user when auth state changes
+  // ---------- Public: wire auth state into AppState ----------
   void updateUser(User? user) {
     _uid = user?.uid;
-
-    if (user != null) {
-      // Don't await here - let it load in the background
-      _balancesLoaded = false; // Reset the flag
-      loadBalances();
-    } else {
-      _clearState();
+    if (_uid == null) {
+      _clear();
+      notifyListeners();
+      return;
     }
-
+    _balancesLoaded = false;
+    // fire-and-forget load; UI can check balancesLoaded
+    // ignore: discarded_futures
+    loadUserState();
     notifyListeners();
   }
 
-  void _clearState() {
+  // ---------- Helpers ----------
+  void _clear() {
     balances = {};
     basket.clear();
     _balancesLoaded = false;
-    _uid = null;
   }
 
-  String _canon(String raw) {
-    final trimmed = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
-    return trimmed.toUpperCase();
+  String _canon(String raw) =>
+      raw.trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+
+  /// Derive a sensible default cap when a category is first seen.
+  /// Return `null` to mark uncapped (e.g., CVB/produce).
+  int? _deriveAllowed(String canonCat) {
+    // CVB / Fruit & Veg — uncapped
+    if (canonCat.contains('CVB') ||
+        canonCat.contains('FRUIT') ||
+        canonCat.contains('VEGETABLE')) {
+      return null;
+    }
+    // Dairy
+    if (canonCat.contains('MILK') ||
+        canonCat.contains('CHEESE') ||
+        canonCat.contains('YOGURT') ||
+        canonCat.contains('DAIRY')) {
+      return 4;
+    }
+    // Cereal / grains
+    if (canonCat.contains('CEREAL') ||
+        canonCat.contains('OAT') ||
+        canonCat.contains('GRAIN')) {
+      return 6;
+    }
+    // Protein: legumes/beans/eggs
+    if (canonCat.contains('LEGUME') ||
+        canonCat.contains('BEAN') ||
+        canonCat.contains('PEA') ||
+        canonCat.contains('LENTIL') ||
+        canonCat.contains('EGG') ||
+        canonCat.contains('PEANUT') ||
+        canonCat.contains('NUT')) {
+      return 6;
+    }
+    // Juice / infant (example)
+    if (canonCat.contains('JUICE') ||
+        canonCat.contains('INFANT') ||
+        canonCat.contains('FORMULA')) {
+      return 4;
+    }
+    // Default soft cap
+    return 5;
   }
 
-  Future<void> loadBalances() async {
+  void _ensureCategoryInit(String canonCat) {
+    if (!balances.containsKey(canonCat)) {
+      balances[canonCat] = {
+        'allowed': _deriveAllowed(canonCat), // may be null (uncapped)
+        'used': 0,
+      };
+      return;
+    }
+    final m = balances[canonCat]!;
+    m.putIfAbsent('allowed', () => _deriveAllowed(canonCat));
+    m.putIfAbsent('used', () => 0);
+  }
+
+  bool _canAddCanon(String canonCat) {
+    final allowed = balances[canonCat]?['allowed'];
+    final used = (balances[canonCat]?['used'] ?? 0) as int;
+    if (allowed is int) return used < allowed;
+    return true; // uncapped
+  }
+
+  // ---------- Firestore I/O ----------
+  Future<void> loadUserState() async {
     if (_uid == null) {
-      _clearState();
+      _clear();
+      notifyListeners();
       return;
     }
 
-    if (_balancesLoaded) return;
-
     try {
-      _isLoading = true;
-      notifyListeners();
-
       final doc = await _db.collection('users').doc(_uid).get();
-
-      if (!doc.exists) {
-        await _createInitialBalances();
-        _balancesLoaded = true;
-        return;
-      }
-
       final data = doc.data();
-      if (data != null) {
-        if (data['balances'] != null) {
-          balances = Map<String, Map<String, int>>.from(
-            (data['balances'] as Map).map(
-              (k, v) => MapEntry(k.toString(), Map<String, int>.from(v as Map)),
-            ),
-          );
-        }
 
-        if (data['basket'] != null) {
-          basket = List<Map<String, dynamic>>.from(data['basket']);
-        }
+      if (data == null) {
+        // First-time user: start empty; caps derive on demand
+        _clear();
+        await _persist(); // create doc scaffold
+      } else {
+        // balances
+        final b = (data['balances'] as Map?) ?? {};
+        balances = b.map((k, v) {
+          final key = _canon(k.toString());
+          final allowed =
+              (v is Map && v['allowed'] is int) ? v['allowed'] as int : null;
+          final used = (v is Map && v['used'] is int) ? v['used'] as int : 0;
+          return MapEntry(key, {'allowed': allowed, 'used': used});
+        });
+
+        // basket
+        final raw = (data['basket'] as List?) ?? [];
+        basket
+          ..clear()
+          ..addAll(raw.whereType<Map>().map((m) => {
+                'upc': (m['upc'] ?? '').toString(),
+                'name': (m['name'] ?? '').toString(),
+                'category': _canon((m['category'] ?? '').toString()),
+                'qty': (m['qty'] is int) ? m['qty'] as int : 1,
+              }));
       }
-
-      _balancesLoaded = true;
-    } catch (e) {
-      debugPrint('Error loading balances: $e');
-      _balancesLoaded = true;
     } finally {
-      _isLoading = false;
+      _balancesLoaded = true;
       notifyListeners();
     }
   }
 
-  Future<void> _createInitialBalances() async {
+  Future<void> _persist() async {
     if (_uid == null) return;
-
-    // These are the default WIC benefits for a new account
-    final defaultBalances = {
-      'MILK': {'allowed': 2, 'used': 0},
-      'CEREAL': {'allowed': 3, 'used': 0},
-      'LEGUMES': {'allowed': 4, 'used': 0},
-      'FRUIT & VEGETABLE CVB': {'allowed': 5, 'used': 0},
-    };
-
-    try {
-      await _db.collection('users').doc(_uid).set(
-        {
-          'balances': defaultBalances,
-          'basket': [],
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      ); // Use merge:true to avoid overwriting email, etc.
-
-      balances = defaultBalances;
-      basket.clear();
-    } catch (e) {
-      debugPrint('Error creating initial balances: $e');
-    }
+    await _db.collection('users').doc(_uid).set(
+      {
+        'balances': balances,
+        'basket': basket,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
   }
 
+  // ---------- Public API used by screens ----------
+
+  /// Returns true if another item from this category can be added.
   bool canAdd(String categoryRaw) {
     final cat = _canon(categoryRaw);
-    final cap = balances[cat];
-    if (_balancesLoaded && cap == null) return false;
-    if (cap == null) return true;
-    return (cap['used'] ?? 0) < (cap['allowed'] ?? 0);
-  }
+    if (!balances.containsKey(cat)) return true; // first time seen -> allowed
+    return _canAddCanon(cat);
+    }
 
+  /// Add one item. Returns `true` if this created a new basket line, `false`
+  /// if it only incremented an existing line. Persists in the background.
   bool addItem({
     required String upc,
     required String name,
     required String category,
   }) {
     if (_uid == null) return false;
-    if (upc.isEmpty) return false;
-
     final cat = _canon(category);
-    final existingIndex = basket.indexWhere((item) => item['upc'] == upc);
 
-    if (existingIndex != -1) {
-      // Item already exists, call increment
+    _ensureCategoryInit(cat);
+    if (!_canAddCanon(cat)) return false;
+
+    final idx = basket.indexWhere((e) => e['upc'] == upc && upc.isNotEmpty);
+    if (idx >= 0) {
+      // existing line -> increment path
       incrementItem(upc);
-      return false; // 'false' means it was an increment
+      return false;
     }
-
-    if (!canAdd(cat)) return false; // Check limit for new item
 
     basket.add({'upc': upc, 'name': name, 'category': cat, 'qty': 1});
+    balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
 
-    if (balances.containsKey(cat)) {
-      balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
-    }
-
+    // persist (fire-and-forget)
+    // ignore: discarded_futures
+    _persist();
     notifyListeners();
-    _updateFirestoreData(); // Save to database
-    return true; // 'true' means it was a new item
+    return true;
   }
 
   void incrementItem(String upc) {
     if (_uid == null) return;
+    final i = basket.indexWhere((e) => e['upc'] == upc);
+    if (i < 0) return;
 
-    final index = basket.indexWhere((item) => item['upc'] == upc);
-    if (index == -1) return;
+    final cat = _canon(basket[i]['category'] as String);
+    _ensureCategoryInit(cat);
+    if (!_canAddCanon(cat)) return;
 
-    final category = _canon(basket[index]['category'] as String);
+    basket[i]['qty'] = (basket[i]['qty'] ?? 1) + 1;
+    balances[cat]!['used'] = (balances[cat]!['used'] ?? 0) + 1;
 
-    if (!canAdd(category)) return;
-
-    basket[index]['qty'] = (basket[index]['qty'] as int) + 1;
-
-    if (balances.containsKey(category)) {
-      balances[category]!['used'] = (balances[category]!['used'] ?? 0) + 1;
-    }
-
+    // ignore: discarded_futures
+    _persist();
     notifyListeners();
-    _updateFirestoreData(); // Save to database
   }
 
-  Future<void> decrementItem(String upc) async {
+  void decrementItem(String upc) {
     if (_uid == null) return;
+    final i = basket.indexWhere((e) => e['upc'] == upc);
+    if (i < 0) return;
 
-    final index = basket.indexWhere((item) => item['upc'] == upc);
-    if (index == -1) return;
+    final cat = _canon(basket[i]['category'] as String);
+    final newQty = (basket[i]['qty'] ?? 1) - 1;
 
-    final currentQty = basket[index]['qty'] as int;
-    final category = _canon(basket[index]['category'] as String);
+    if (balances.containsKey(cat)) {
+      final used = (balances[cat]!['used'] ?? 0) as int;
+      balances[cat]!['used'] = (used - 1).clamp(0, 1 << 30);
+    }
 
-    if (currentQty > 1) {
-      basket[index]['qty'] = currentQty - 1;
+    if (newQty <= 0) {
+      basket.removeAt(i);
     } else {
-      basket.removeAt(index);
+      basket[i]['qty'] = newQty;
     }
 
-    if (balances.containsKey(category)) {
-      balances[category]!['used'] = (balances[category]!['used'] ?? 0) - 1;
-    }
-
+    // ignore: discarded_futures
+    _persist();
     notifyListeners();
-    await _updateFirestoreData(); // Save to database
   }
 
-  Future<void> _updateFirestoreData() async {
+  /// Optional: set/override a cap from UI/admin. `null` = uncapped.
+  Future<void> setCap(String category, int? allowed) async {
     if (_uid == null) return;
-
-    try {
-      await _db.collection('users').doc(_uid).set({
-        'basket': basket,
-        'balances': balances,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('Error updating Firestore: $e');
-    }
+    final cat = _canon(category);
+    _ensureCategoryInit(cat);
+    balances[cat]!['allowed'] = allowed;
+    await _persist();
+    notifyListeners();
   }
 }

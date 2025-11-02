@@ -2,41 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import '/app_router.dart'; // router instance
 
 import 'firebase_options.dart';
-import 'firebase_options.dart';          
-import 'package:provider/provider.dart';
 import 'app_router.dart';
 import 'state/app_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late final AppState _appState;
-
-  @override
-  void initState() {
-    super.initState();
-    _appState = AppState();
-  }
-
-  @override
-  void dispose() {
-    _appState.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,19 +27,18 @@ class _MyAppState extends State<MyApp> {
           initialData: null,
         ),
         ChangeNotifierProxyProvider<User?, AppState>(
-          create: (_) => _appState,
-          update: (context, user, appState) {
-            if (appState == null) throw Exception('AppState is null');
-            appState.updateUser(user);
+          create: (_) => AppState(),
+          update: (_, user, appState) {
+            appState!.updateUser(user);
             return appState;
           },
         ),
       ],
       child: MaterialApp.router(
-        title: 'WolfBite',
+        title: 'Smart WIC Cart',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
+          colorSchemeSeed: Colors.teal,
         ),
         routerConfig: router,
       ),

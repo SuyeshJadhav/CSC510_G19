@@ -2,19 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// Import your screens
+// Feature tabs
 import 'screens/scan_screen.dart';
 import 'screens/basket_screen.dart';
 import 'screens/balances_screen.dart';
+
+// Auth screens (note the subfolder)
 import 'screens/login screens/login_screen.dart';
+import 'screens/login screens/signup_page.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/login', // Start with login
+  initialLocation: '/login',
   routes: [
+    // Auth routes
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) => const SignupPage(),
+    ),
+
+    // Main shell with bottom nav (signed-in area)
     ShellRoute(
       builder: (context, state, child) => _MainShell(child: child),
       routes: [
@@ -37,40 +47,36 @@ final GoRouter router = GoRouter(
     ),
   ],
 
-redirect: (context, state) {
-  final user = FirebaseAuth.instance.currentUser;
-  final String path = state.uri.path; // <- use this
+  // OPTION A: When logged out, allow only /login and /signup
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final path = state.uri.path;
+    final isAuthRoute = path == '/login' || path == '/signup';
 
-  // Not logged in, force to login
-  if (user == null && path != '/login') return '/login';
+    if (user == null) {
+      // Logged out → only allow auth routes
+      return isAuthRoute ? null : '/login';
+    }
 
-  // Logged in and on login page, go to scan
-  if (user != null && path == '/login') return '/scan';
+    // Logged in → don't let them stay on auth routes
+    if (isAuthRoute) return '/scan';
 
-  return null; // no redirect
-},
-
+    return null;
+  },
 );
 
-class _MainShell extends StatefulWidget {
-  final Widget child;
+class _MainShell extends StatelessWidget {
   const _MainShell({required this.child});
+  final Widget child;
 
-  @override
-  State<_MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends State<_MainShell> {
-  int _calculateSelectedIndex(BuildContext context) {
-    // use uri.toString() from GoRouterState to get current path
-    final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/scan')) return 0;
-    if (location.startsWith('/basket')) return 1;
-    if (location.startsWith('/benefits')) return 2;
+  int _selectedIndexFor(String path) {
+    if (path.startsWith('/scan')) return 0;
+    if (path.startsWith('/basket')) return 1;
+    if (path.startsWith('/benefits')) return 2;
     return 0;
   }
 
-  void _onItemTapped(BuildContext context, int index) {
+  void _onTap(BuildContext context, int index) {
     switch (index) {
       case 0:
         context.go('/scan');
@@ -86,13 +92,14 @@ class _MainShellState extends State<_MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = _calculateSelectedIndex(context);
+    final path = GoRouterState.of(context).uri.path;
+    final selected = _selectedIndexFor(path);
 
     return Scaffold(
-      body: widget.child,
+      body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) => _onItemTapped(context, index),
+        selectedIndex: selected,
+        onDestinationSelected: (i) => _onTap(context, i),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.qr_code_scanner),

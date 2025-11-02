@@ -11,7 +11,7 @@ class BalancesScreen extends StatelessWidget {
 
     if (!app.balancesLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<AppState>().loadBalances();
+        context.read<AppState>().loadUserState();
       });
     }
 

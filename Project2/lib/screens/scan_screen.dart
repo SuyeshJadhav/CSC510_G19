@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
@@ -15,14 +16,19 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   final _apl = AplService();
   final _input = TextEditingController();
-  String? _last;
+
   bool _busy = false;
+  String? _lastScanned;
+  Map<String, dynamic>? _lastInfo;
+  bool _lastEligible = false;
 
   @override
   void initState() {
     super.initState();
+    // Load user-scoped balances/basket once we have a context.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AppState>().loadBalances();
+      if (!mounted) return;
+      context.read<AppState>().loadUserState();
     });
   }
 
@@ -32,92 +38,82 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   Future<void> _diagnose() async {
-    const testUpc = '000000743266'; // change to one that exists
+    // Put a UPC that exists in your Firestore APL for a quick ping test.
+    const testUpc = '000000743266';
     try {
       final info = await _apl.findByUpc(testUpc);
       if (!mounted) return;
-      _snack(
-        info == null
-            ? 'Firestore MISSING: $testUpc'
-            : 'Firestore OK: $testUpc → ${info['name']}',
-      );
+      _snack(info == null
+          ? 'Firestore MISSING: $testUpc'
+          : 'Firestore OK: $testUpc → ${info['name']}');
     } catch (e) {
       _snack('Firestore ERROR: $e');
     }
   }
 
-  Future<void> _check(String code) async {
+  /// Only checks eligibility; does NOT add to basket.
+  Future<void> _checkEligibility(String code) async {
     final upc = code.trim();
-    if (upc.isEmpty || upc == _last || _busy) return;
-    _last = upc;
+    if (upc.isEmpty || _busy) return;
+
     _busy = true;
     try {
       final info = await _apl.findByUpc(upc);
       if (!mounted) return;
+
       if (info == null) {
+        setState(() {
+          _lastInfo = null;
+          _lastEligible = false;
+          _lastScanned = upc;
+        });
         _snack('Not found in APL');
         return;
       }
-      final eligible = info['eligible'] == true;
-      if (eligible) {
-        // It now uses the bool return value from your AppState's addItem
-        final bool isNewItem = context.read<AppState>().addItem(
-          upc: upc,
-          name: info['name'] as String,
-          category: info['category'] as String,
-        );
 
-        // Show the correct message based on the return value
-        if (isNewItem) {
-          _snack('WIC Approved ✅ ${info['name']}');
-        } else {
-          // Check if it failed because of WIC limits
-          final appState = context.read<AppState>();
-          final canAdd = appState.canAdd(info['category'] as String);
-          if (!canAdd) {
-            _snack('Limit reached for ${info['category']}');
-          } else {
-            _snack('Quantity updated ✅ ${info['name']}');
-          }
-        }
-        // After adding the item, pop the screen and return 'true'
-        // to signal success to the router.
-        if (mounted) Navigator.of(context).pop(true);
+      final ok = info['eligible'] == true;
+      setState(() {
+        _lastInfo = info;
+        _lastEligible = ok;
+        _lastScanned = upc;
+      });
+
+      if (ok) {
+        _snack('✅ Eligible: ${info['name']}');
       } else {
-        _snack('Not WIC Approved ❌');
+        _snack('❌ Not WIC Approved');
+        // Offer substitutes (optional)
         final subs = await _apl.substitutes(info['category'] as String);
         if (!mounted || subs.isEmpty) return;
+        // Lightweight suggestion sheet
+        // ignore: use_build_context_synchronously
         showModalBottomSheet(
           context: context,
           builder: (_) => SafeArea(
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                const Text(
-                  'Try these substitutes:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                ...subs.map(
-                  (s) => ListTile(
-                    title: Text(s['name'] as String),
-                    trailing: const Icon(Icons.add),
-                    onTap: () {
-                      context.read<AppState>().addItem(
-                        upc: s['upc'] as String? ?? '',
-                        name: s['name'] as String,
-                        category: s['category'] as String,
-                      );
-                      Navigator.pop(context);
-
-                      // Also pop the scan screen after adding a substitute
-                      if (mounted) Navigator.of(context).pop(true);
-                    },
-                  ),
-                ),
+                const Text('Try these substitutes:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                ...subs.map((s) => ListTile(
+                      title: Text((s['name'] ?? '') as String),
+                      trailing: const Icon(Icons.add),
+                      onTap: () {
+                        context.read<AppState>().addItem(
+                              upc: (s['upc'] ?? '') as String,
+                              name: (s['name'] ?? '') as String,
+                              category: (s['category'] ?? '') as String,
+                            );
+                        Navigator.pop(context);
+                        context.go('/basket');
+                      },
+                    )),
               ],
             ),
           ),
@@ -128,9 +124,35 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  /// Adds the last eligible item to basket and navigates to /basket.
+  void _addToBasket() {
+    if (!_lastEligible || _lastInfo == null) {
+      _snack('Check eligibility first!');
+      return;
+    }
+    final info = _lastInfo!;
+    context.read<AppState>().addItem(
+          upc: (info['upc'] ?? '') as String,
+          name: (info['name'] ?? '') as String,
+          category: (info['category'] ?? '') as String,
+        );
+    _snack('✅ Added: ${info['name']}');
+    context.go('/basket');
+  }
+
+  // Mobile scanner handler (debounced)
+  void _onDetect(BarcodeCapture cap) {
+    if (_busy) return;
+    final code = cap.barcodes.isNotEmpty ? cap.barcodes.first.rawValue : null;
+    if (code == null) return;
+    if (code == _lastScanned) return; // debounce same code
+    _checkEligibility(code);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = !kIsWeb;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan Item'),
@@ -149,35 +171,39 @@ class _ScanScreenState extends State<ScanScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Place barcode in the square',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Place barcode inside the square',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 20),
-                    // This SizedBox and ClipRRect create the square scanner UI
+                    const SizedBox(height: 16),
                     SizedBox(
-                      width: 300,
-                      height: 300,
+                      width: 280,
+                      height: 280,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: MobileScanner(
-                          onDetect: (cap) {
-                            final code = cap.barcodes.isNotEmpty
-                                ? cap.barcodes.first.rawValue
-                                : null;
-                            if (code != null) _check(code);
-                          },
-                        ),
+                        child: MobileScanner(onDetect: _onDetect),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FilledButton(
+                          onPressed: (_lastInfo != null) ? () => _checkEligibility(_lastScanned ?? '') : null,
+                          child: const Text('Re-check'),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton.tonal(
+                          onPressed: _lastEligible ? _addToBasket : null,
+                          child: const Text('Add to Basket'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             )
           : Padding(
-              // This is the web fallback, which is unchanged
+              // Web fallback: manual UPC entry
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,16 +219,34 @@ class _ScanScreenState extends State<ScanScreen> {
                             hintText: '000000743266',
                             border: OutlineInputBorder(),
                           ),
-                          onSubmitted: _check,
+                          onSubmitted: _checkEligibility,
                         ),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: () => _check(_input.text),
-                        child: const Text('Check'),
+                        onPressed: () => _checkEligibility(_input.text),
+                        child: const Text('Check Eligibility'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonal(
+                        onPressed: _lastEligible ? _addToBasket : null,
+                        child: const Text('Add to Basket'),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  if (_lastInfo != null)
+                    Card(
+                      margin: const EdgeInsets.only(top: 4),
+                      child: ListTile(
+                        title: Text((_lastInfo!['name'] ?? '') as String),
+                        subtitle: Text('UPC: ${_lastInfo!['upc'] ?? ''} • '
+                            'Category: ${_lastInfo!['category'] ?? ''}'),
+                        trailing: _lastEligible
+                            ? const Icon(Icons.verified, color: Colors.green)
+                            : const Icon(Icons.block, color: Colors.red),
+                      ),
+                    ),
                 ],
               ),
             ),
