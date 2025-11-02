@@ -1,258 +1,242 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import '../state/app_state.dart';
 
+/// Screen displaying WIC benefit balances and account management.
+///
+/// Shows the user's current benefit usage for each WIC category, with
+/// visual progress indicators. Each category displays:
+/// - Items used vs. allowed limit
+/// - Progress bar with color-coded status (green/orange/red)
+/// - "Unlimited" badge for uncapped categories (CVB, produce)
+///
+/// Also provides account management features:
+/// - Sign out button that clears state and returns to [LoginScreen]
+/// - Loading state while [AppState.loadUserState] completes
+///
+/// This screen watches [AppState.balancesLoaded] to determine when to
+/// show data vs. loading spinner.
+///
+/// Usage: Navigated to via `/benefits` route in bottom navigation.
 class BalancesScreen extends StatelessWidget {
   const BalancesScreen({super.key});
 
+  /// Signs the user out of [FirebaseAuth] and navigates to login screen.
+  ///
+  /// Clears all local state in [AppState] automatically via the auth
+  /// listener wired in [main.dart].
+  ///
+  /// Side effects:
+  /// - Calls [FirebaseAuth.instance.signOut]
+  /// - Navigates to `/login` via [GoRouter]
+  Future<void> _signOut(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      context.go('/login');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-
-    if (!app.balancesLoaded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.read<AppState>().loadUserState();
-      });
-    }
+    final appState = context.watch<AppState>();
+    final balances = appState.balances;
+    final loaded = appState.balancesLoaded;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your WIC Benefits'),
-        backgroundColor: Colors.red.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('WIC Benefits'),
+        centerTitle: true,
         actions: [
+          // Sign out button
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) context.go('/login');
-            },
+            tooltip: 'Sign Out',
+            onPressed: () => _signOut(context),
           ),
         ],
       ),
-      body: !app.balancesLoaded
-          ? const Center(child: CircularProgressIndicator(color: Colors.red))
-          : _buildBalancesList(context, app),
+      body: !loaded
+          ? const Center(child: CircularProgressIndicator())
+          : balances.isEmpty
+          ? _buildEmptyState()
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 16),
+                ...balances.entries.map(
+                  (entry) =>
+                      _BalanceCard(category: entry.key, data: entry.value),
+                ),
+              ],
+            ),
     );
   }
 
-  Widget _buildBalancesList(BuildContext context, AppState app) {
-    final balanceEntries = app.balances.entries.toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.red.shade50, Colors.white],
+  /// Builds the header section explaining benefit balances.
+  ///
+  /// Shows an informational card at the top of the screen with an icon
+  /// and description text.
+  Widget _buildHeader() {
+    return Card(
+      color: Colors.blue.shade50,
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue, size: 32),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Your WIC benefit balances update as you add items to your basket.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
         ),
       ),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        itemCount: balanceEntries.length,
-        itemBuilder: (context, index) {
-          final entry = balanceEntries[index];
-          final category = entry.key;
-          final allowed = entry.value['allowed'] ?? 0;
-          final used = entry.value['used'] ?? 0;
-          final remaining = allowed - used;
-
-          final fractionUsed = (allowed == 0) ? 0.0 : used / allowed;
-
-          // Determine status and color
-          Color statusColor;
-          IconData statusIcon;
-          String statusText;
-
-          if (remaining == 0) {
-            statusColor = Colors.red.shade700;
-            statusIcon = Icons.cancel_outlined;
-            statusText = 'Limit Reached';
-          } else if (fractionUsed > 0.8) {
-            statusColor = Colors.red.shade400;
-            statusIcon = Icons.warning_amber_rounded;
-            statusText = 'Low';
-          } else if (used == 0) {
-            statusColor = Colors.grey.shade600;
-            statusIcon = Icons.info_outline;
-            statusText = 'Unused';
-          } else {
-            statusColor = Colors.red.shade600;
-            statusIcon = Icons.check_circle_outline;
-            statusText = 'Available';
-          }
-
-          return Card(
-            elevation: 2.0,
-            margin: const EdgeInsets.only(bottom: 10.0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.0),
-                color: Colors.white,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Row with Category and Status Badge
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            category,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red.shade900,
-                                ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: statusColor.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(statusIcon, size: 14, color: statusColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                statusText,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: statusColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Compact Usage Statistics
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildCompactStatBox(
-                            context,
-                            'Used',
-                            used.toString(),
-                            Colors.red.shade600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildCompactStatBox(
-                            context,
-                            'Left',
-                            remaining.toString(),
-                            statusColor,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildCompactStatBox(
-                            context,
-                            'Total',
-                            allowed.toString(),
-                            Colors.red.shade800,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Compact Progress Bar
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: fractionUsed,
-                              minHeight: 10,
-                              backgroundColor: Colors.grey.shade200,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                statusColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${(fractionUsed * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
-  Widget _buildCompactStatBox(
-    BuildContext context,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-      ),
+  /// Builds the UI shown when no benefit data exists yet.
+  ///
+  /// Displays a centered message encouraging the user to start scanning
+  /// products. This typically shows for new accounts before any items
+  /// have been added.
+  Widget _buildEmptyState() {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 80,
+            color: Colors.grey.shade400,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 16),
           Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
-            ),
-            textAlign: TextAlign.center,
+            'No benefit data yet',
+            style: TextStyle(fontSize: 20, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Scan products to see your balances',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Individual benefit category balance card.
+///
+/// Displays usage information for a single WIC category with a visual
+/// progress indicator. The [data] map from [AppState.balances] contains:
+/// - `'allowed'`: [int]? - Max items (null = unlimited)
+/// - `'used'`: [int] - Current usage count
+///
+/// The progress bar changes color based on usage percentage:
+/// - Green: 0-60% used
+/// - Orange: 60-85% used
+/// - Red: 85-100% used
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({required this.category, required this.data});
+
+  /// The canonical category name (uppercase).
+  final String category;
+
+  /// Balance data map with 'allowed' and 'used' keys from [AppState.balances].
+  final Map<String, dynamic> data;
+
+  /// Calculates the color for the progress bar based on usage percentage.
+  ///
+  /// Returns:
+  /// - [Colors.green]: Less than 60% used
+  /// - [Colors.orange]: 60-85% used
+  /// - [Colors.red]: 85% or more used
+  ///
+  /// For unlimited categories (allowed is null), always returns green.
+  Color _getProgressColor(int? allowed, int used) {
+    if (allowed == null) return Colors.green;
+    final pct = used / allowed;
+    if (pct < 0.6) return Colors.green;
+    if (pct < 0.85) return Colors.orange;
+    return Colors.red;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allowed = data['allowed'] as int?;
+    final used = data['used'] as int? ?? 0;
+    final isUnlimited = allowed == null;
+    final progress = isUnlimited ? 0.0 : (used / allowed).clamp(0.0, 1.0);
+    final color = _getProgressColor(allowed, used);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category name and status badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    category,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (isUnlimited)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Unlimited',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Usage text
+            Text(
+              isUnlimited
+                  ? 'Used: $used items'
+                  : 'Used: $used of $allowed items',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
+            if (!isUnlimited) ...[
+              const SizedBox(height: 8),
+              // Progress bar
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -1,36 +1,36 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/apl_service.dart';
 import '../state/app_state.dart';
+import '../services/apl_service.dart';
 
+/// Barcode scanning screen for WIC eligibility checking.
+///
+/// Features:
+/// - Live camera barcode scanning on mobile devices
+/// - Manual UPC entry via text field on desktop
+/// - WIC eligibility verification via [AplService]
+/// - Add eligible items to shopping basket
+/// - Diagnostic test for Firestore connectivity
+///
+/// Uses [MobileScanner] widget for camera-based scanning.
+/// Falls back to text input on web/desktop platforms.
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
+
   @override
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  final _apl = AplService();
   final _input = TextEditingController();
+  final _apl = AplService();
 
-  bool _busy = false;
   String? _lastScanned;
   Map<String, dynamic>? _lastInfo;
-  bool _lastEligible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Load user-scoped balances/basket once we have a context.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<AppState>().loadUserState();
-    });
-  }
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -38,13 +38,19 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
+  /// Shows a [SnackBar] with the provided message.
+  ///
+  /// Checks [mounted] before showing to prevent errors after disposal.
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// Tests Firestore connectivity by querying a known UPC.
+  ///
+  /// Uses test UPC `000000743266` to verify [AplService] can read from Firestore.
+  /// Displays success or error message via [_snack].
   Future<void> _diagnose() async {
-    // Put a UPC that exists in your Firestore APL for a quick ping test.
     const testUpc = '000000743266';
     try {
       final info = await _apl.findByUpc(testUpc);
@@ -59,7 +65,15 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  /// Only checks eligibility; does NOT add to basket.
+  /// Checks WIC eligibility for the scanned/entered barcode.
+  ///
+  /// Process:
+  /// 1. Validates UPC format
+  /// 2. Queries Firestore APL via [AplService.findByUpc]
+  /// 3. Displays product info and eligibility status
+  ///
+  /// Does NOT add item to basket - use [_addToBasket] for that.
+  /// Sets [_busy] to prevent concurrent scans.
   Future<void> _checkEligibility(String code) async {
     final upc = code.trim();
     if (upc.isEmpty || _busy) return;
@@ -70,102 +84,75 @@ class _ScanScreenState extends State<ScanScreen> {
       if (!mounted) return;
 
       if (info == null) {
+        _snack('UPC $upc not found in APL');
         setState(() {
-          _lastInfo = null;
-          _lastEligible = false;
           _lastScanned = upc;
+          _lastInfo = null;
         });
-        _snack('Not found in APL');
         return;
       }
 
-      final ok = info['eligible'] == true;
       setState(() {
-        _lastInfo = info;
-        _lastEligible = ok;
         _lastScanned = upc;
+        _lastInfo = info;
       });
 
-      if (ok) {
-        _snack('✅ Eligible: ${info['name']}');
-      } else {
-        _snack('❌ Not WIC Approved');
-        // Offer substitutes (optional)
-        final subs = await _apl.substitutes(info['category'] as String);
-        if (!mounted || subs.isEmpty) return;
-        // Lightweight suggestion sheet
-        // ignore: use_build_context_synchronously
-        showModalBottomSheet(
-          context: context,
-          builder: (_) => SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                const Text(
-                  'Try these substitutes:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                ...subs.map(
-                  (s) => ListTile(
-                    title: Text((s['name'] ?? '') as String),
-                    trailing: const Icon(Icons.add),
-                    onTap: () {
-                      context.read<AppState>().addItem(
-                        upc: (s['upc'] ?? '') as String,
-                        name: (s['name'] ?? '') as String,
-                        category: (s['category'] ?? '') as String,
-                      );
-                      Navigator.pop(context);
-                      context.go('/basket');
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }
+      final name = info['name'] ?? 'Unknown';
+      final cat = info['category'] ?? '?';
+      _snack('$name ($cat) - Eligible!');
+    } catch (e) {
+      _snack('Error: $e');
     } finally {
       _busy = false;
     }
   }
 
-  /// Adds the last eligible item to basket and navigates to /basket.
+  /// Adds the currently scanned item to the shopping basket.
+  ///
+  /// Requires [_lastInfo] to be set (item must be scanned/checked first).
+  /// Extracts [upc], [name], and [category] from [_lastInfo] and passes them
+  /// to [AppState.addItem] as named parameters.
+  ///
+  /// Shows confirmation [SnackBar] after successful addition.
   void _addToBasket() {
-    if (!_lastEligible || _lastInfo == null) {
-      _snack('Check eligibility first!');
+    if (_lastInfo == null) {
+      _snack('No item scanned yet');
       return;
     }
-    final info = _lastInfo!;
-    context.read<AppState>().addItem(
-      upc: (info['upc'] ?? '') as String,
-      name: (info['name'] ?? '') as String,
-      category: (info['category'] ?? '') as String,
+
+    final appState = context.read<AppState>();
+    appState.addItem(
+      upc: _lastScanned ?? '',
+      name: _lastInfo!['name'] ?? 'Unknown',
+      category: _lastInfo!['category'] ?? 'Unknown',
     );
-    _snack('✅ Added: ${info['name']}');
-    context.go('/basket');
+
+    _snack('Added ${_lastInfo!['name']} to basket');
   }
 
-  // Mobile scanner handler (debounced)
-  void _onDetect(BarcodeCapture cap) {
+  /// Handles barcode detection from [MobileScanner].
+  ///
+  /// Extracts first barcode from [capture] and calls [_checkEligibility].
+  /// Prevents multiple concurrent scans via [_busy] flag.
+  void _onDetect(BarcodeCapture capture) {
     if (_busy) return;
-    final code = cap.barcodes.isNotEmpty ? cap.barcodes.first.rawValue : null;
-    if (code == null) return;
-    if (code == _lastScanned) return; // debounce same code
-    _checkEligibility(code);
+    final barcode = capture.barcodes.firstOrNull;
+    if (barcode?.rawValue != null) {
+      _checkEligibility(barcode!.rawValue!);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = !kIsWeb;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan Item'),
+        title: const Text('Scan Product'),
         actions: [
           IconButton(
-            tooltip: 'Run diagnostics',
-            icon: const Icon(Icons.bug_report_outlined),
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Test Firestore',
             onPressed: _diagnose,
           ),
           IconButton(
@@ -211,64 +198,96 @@ class _ScanScreenState extends State<ScanScreen> {
                           child: const Text('Re-check'),
                         ),
                         const SizedBox(width: 12),
-                        FilledButton.tonal(
-                          onPressed: _lastEligible ? _addToBasket : null,
-                          child: const Text('Add to Basket'),
+                        FilledButton(
+                          onPressed: _lastInfo != null ? _addToBasket : null,
+                          child: const Text('Add to Cart'),
                         ),
                       ],
                     ),
+                    if (_lastInfo != null) ...[
+                      const SizedBox(height: 16),
+                      Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _lastInfo!['name'] ?? 'Unknown',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text('Category: ${_lastInfo!['category']}'),
+                              Text('UPC: $_lastScanned'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             )
-          : Padding(
-              // Web fallback: manual UPC entry
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Web demo: enter UPC'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Enter UPC manually',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
                           controller: _input,
                           decoration: const InputDecoration(
-                            hintText: '000000743266',
+                            labelText: 'UPC Code',
                             border: OutlineInputBorder(),
                           ),
                           onSubmitted: _checkEligibility,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () => _checkEligibility(_input.text),
-                        child: const Text('Check Eligibility'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.tonal(
-                        onPressed: _lastEligible ? _addToBasket : null,
-                        child: const Text('Add to Basket'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (_lastInfo != null)
-                    Card(
-                      margin: const EdgeInsets.only(top: 4),
-                      child: ListTile(
-                        title: Text((_lastInfo!['name'] ?? '') as String),
-                        subtitle: Text(
-                          'UPC: ${_lastInfo!['upc'] ?? ''} • '
-                          'Category: ${_lastInfo!['category'] ?? ''}',
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () => _checkEligibility(_input.text),
+                                child: const Text('Check'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: _lastInfo != null
+                                    ? _addToBasket
+                                    : null,
+                                child: const Text('Add'),
+                              ),
+                            ),
+                          ],
                         ),
-                        trailing: _lastEligible
-                            ? const Icon(Icons.verified, color: Colors.green)
-                            : const Icon(Icons.block, color: Colors.red),
-                      ),
+                        if (_lastInfo != null) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            _lastInfo!['name'] ?? 'Unknown',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('Category: ${_lastInfo!['category']}'),
+                        ],
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
     );

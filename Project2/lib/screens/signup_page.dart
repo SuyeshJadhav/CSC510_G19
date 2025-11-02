@@ -3,6 +3,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 
+/// Sign-up screen for creating new user accounts.
+///
+/// Collects user information:
+/// - Full name
+/// - Email address
+/// - Password (with visibility toggle)
+/// - Physical address
+///
+/// On successful registration:
+/// 1. Creates [FirebaseAuth] account
+/// 2. Saves user profile to [FirebaseFirestore] in `users` collection
+/// 3. Signs out user
+/// 4. Navigates to login screen
+///
+/// Forces logout after signup to ensure clean login flow.
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 
@@ -29,18 +44,26 @@ class _SignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
+  /// Creates new user account with [FirebaseAuth] and saves profile.
+  ///
+  /// Process:
+  /// 1. Validates all form fields
+  /// 2. Creates user with [FirebaseAuth.createUserWithEmailAndPassword]
+  /// 3. Saves user profile to Firestore `users/{uid}` document
+  /// 4. Signs out user to force clean login
+  /// 5. Navigates to `/login`
+  ///
+  /// Displays error via [SnackBar] if registration fails.
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
     try {
-      // 1) Create user
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
 
-      // 2) Save profile
       await FirebaseFirestore.instance
           .collection('users')
           .doc(cred.user!.uid)
@@ -51,7 +74,6 @@ class _SignupPageState extends State<SignupPage> {
             'createdAt': FieldValue.serverTimestamp(),
           });
 
-      // 3) Option A: force back to login
       await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
@@ -90,7 +112,7 @@ class _SignupPageState extends State<SignupPage> {
                   children: [
                     const SizedBox(height: 8),
                     Text(
-                      'Let’s get you started',
+                      'Let\'s get you started',
                       style: theme.textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 6),
@@ -101,8 +123,6 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Name
                     TextFormField(
                       controller: _name,
                       textInputAction: TextInputAction.next,
@@ -111,35 +131,30 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: Icon(Icons.person_outline),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Enter your name'
-                          : null,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Name required' : null,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Email
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: Icon(Icons.mail_outline),
+                        prefixIcon: Icon(Icons.email_outlined),
                         border: OutlineInputBorder(),
                       ),
                       validator: (v) => (v == null || !v.contains('@'))
-                          ? 'Enter a valid email'
+                          ? 'Invalid email'
                           : null,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Password
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: 'Password (min 6 chars)',
+                        labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -147,16 +162,12 @@ class _SignupPageState extends State<SignupPage> {
                             _obscure ? Icons.visibility : Icons.visibility_off,
                           ),
                           onPressed: () => setState(() => _obscure = !_obscure),
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
                         ),
                       ),
-                      validator: (v) => (v == null || v.length < 6)
-                          ? 'Use at least 6 characters'
-                          : null,
+                      validator: (v) =>
+                          (v == null || v.length < 6) ? 'Min 6 chars' : null,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Address
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _address,
                       textInputAction: TextInputAction.done,
@@ -165,34 +176,24 @@ class _SignupPageState extends State<SignupPage> {
                         prefixIcon: Icon(Icons.home_outlined),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Enter your address'
-                          : null,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Address required' : null,
                     ),
-                    const SizedBox(height: 20),
-
-                    // Sign up button
+                    const SizedBox(height: 24),
                     SizedBox(
-                      height: 48,
+                      width: double.infinity,
                       child: FilledButton(
                         onPressed: _loading ? null : _signup,
                         child: _loading
                             ? const SizedBox(
-                                width: 20,
                                 height: 20,
+                                width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
                             : const Text('Sign Up'),
                       ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    // Back to login
-                    TextButton(
-                      onPressed: _loading ? null : () => context.go('/login'),
-                      child: const Text('Already have an account? Log in'),
                     ),
                   ],
                 ),
