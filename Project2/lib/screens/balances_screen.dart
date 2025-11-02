@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 class BalancesScreen extends StatelessWidget {
   const BalancesScreen({super.key});
 
@@ -21,6 +22,16 @@ class BalancesScreen extends StatelessWidget {
         backgroundColor: Colors.red.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+    IconButton(
+      icon: const Icon(Icons.logout),
+      tooltip: 'Log out',
+      onPressed: () async {
+        await FirebaseAuth.instance.signOut();
+        if (context.mounted) context.go('/login');
+      },
+    ),
+  ],
       ),
       body: !app.balancesLoaded
           ? const Center(child: CircularProgressIndicator(color: Colors.red))
