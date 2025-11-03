@@ -13,7 +13,8 @@ import 'package:flutter/foundation.dart';
 /// Usage: Wire this into your app via [ChangeNotifierProxyProvider] in
 /// [main.dart] to automatically sync with [FirebaseAuth] state changes.
 class AppState extends ChangeNotifier {
-  final _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db;
+  AppState({FirebaseFirestore? db}) : _db = db ?? FirebaseFirestore.instance;
 
   // ---------- Reactive data ----------
 
