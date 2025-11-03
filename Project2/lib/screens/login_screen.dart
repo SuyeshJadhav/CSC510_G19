@@ -13,8 +13,8 @@ import 'package:go_router/go_router.dart';
 ///
 /// After successful login, navigates to `/scan` (main app).
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
+  final FirebaseAuth? auth;
+  const LoginScreen({super.key, this.auth});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -33,21 +33,24 @@ class _LoginScreenState extends State<LoginScreen> {
   /// On failure, displays error message via [SnackBar].
   ///
   /// Sets [_loading] state to show progress indicator during auth.
+FirebaseAuth get auth => widget.auth ?? FirebaseAuth.instance;
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // v-- USE THE NEW 'auth' GETTER --v
+      await auth.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
       if (!mounted) return;
-      context.go('/scan');
+      context.go('/scan'); // Go to main app
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Login failed')),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
