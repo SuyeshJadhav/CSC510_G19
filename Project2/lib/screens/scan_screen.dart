@@ -18,7 +18,9 @@ import '../services/apl_service.dart';
 /// Uses [MobileScanner] widget for camera-based scanning.
 /// Falls back to text input on web/desktop platforms.
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  const ScanScreen({super.key, this.aplService, this.auth});
+  final AplService? aplService;
+  final FirebaseAuth? auth;
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -26,11 +28,19 @@ class ScanScreen extends StatefulWidget {
 
 class _ScanScreenState extends State<ScanScreen> {
   final _input = TextEditingController();
-  final _apl = AplService();
+  late final AplService _apl;
+  late final FirebaseAuth _auth;
 
   String? _lastScanned;
   Map<String, dynamic>? _lastInfo;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _apl = widget.aplService ?? AplService();
+    _auth = widget.auth ?? FirebaseAuth.instance;
+  }
 
   @override
   void dispose() {
@@ -45,25 +55,6 @@ class _ScanScreenState extends State<ScanScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
-
-  /// Tests Firestore connectivity by querying a known UPC.
-  ///
-  /// Uses test UPC `000000743266` to verify [AplService] can read from Firestore.
-  /// Displays success or error message via [_snack].
-  // Future<void> _diagnose() async {
-  //   const testUpc = '000000743266';
-  //   try {
-  //     final info = await _apl.findByUpc(testUpc);
-  //     if (!mounted) return;
-  //     _snack(
-  //       info == null
-  //           ? 'Firestore MISSING: $testUpc'
-  //           : 'Firestore OK: $testUpc → ${info['name']}',
-  //     );
-  //   } catch (e) {
-  //     _snack('Firestore ERROR: $e');
-  //   }
-  // }
 
   /// Checks WIC eligibility for the scanned/entered barcode.
   ///
@@ -171,7 +162,8 @@ class _ScanScreenState extends State<ScanScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+              // await FirebaseAuth.instance.signOut();
+              await _auth.signOut();
               if (context.mounted) context.go('/login');
             },
           ),
@@ -227,7 +219,7 @@ class _ScanScreenState extends State<ScanScreen> {
                                 ? const Color(0xFFD1001C)
                                 : Colors.grey.shade300,
                           ),
-                          child: const Text('Add to Basket'),
+                          child: const Text('Add'),
                         ),
                       ],
                     ),
@@ -393,7 +385,7 @@ class _ScanScreenState extends State<ScanScreen> {
                                           : Colors.grey.shade300,
                                     ),
                                     icon: const Icon(Icons.add_shopping_cart),
-                                    label: const Text('Add'),
+                                    label: const Text('Add to Basket'),
                                   ),
                                 ),
                               ],

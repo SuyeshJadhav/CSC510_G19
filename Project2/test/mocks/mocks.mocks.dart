@@ -5,6 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i7;
 import 'dart:typed_data' as _i15;
+import 'dart:ui' as _i20;
 
 import 'package:cloud_firestore/cloud_firestore.dart' as _i6;
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart'
@@ -23,6 +24,8 @@ import 'package:go_router/src/router.dart' as _i16;
 import 'package:go_router/src/state.dart' as _i8;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i14;
+import 'package:wolfbite/services/apl_service.dart' as _i18;
+import 'package:wolfbite/state/app_state.dart' as _i19;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -2091,6 +2094,155 @@ class MockGoRouter extends _i1.Mock implements _i16.GoRouter {
   @override
   void dispose() => super.noSuchMethod(
     Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
+}
+
+/// A class which mocks [AplService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockAplService extends _i1.Mock implements _i18.AplService {
+  MockAplService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i7.Future<Map<String, dynamic>?> findByUpc(String? upc) =>
+      (super.noSuchMethod(
+            Invocation.method(#findByUpc, [upc]),
+            returnValue: _i7.Future<Map<String, dynamic>?>.value(),
+          )
+          as _i7.Future<Map<String, dynamic>?>);
+
+  @override
+  _i7.Future<List<Map<String, dynamic>>> substitutes(
+    String? category, {
+    int? max = 3,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#substitutes, [category], {#max: max}),
+            returnValue: _i7.Future<List<Map<String, dynamic>>>.value(
+              <Map<String, dynamic>>[],
+            ),
+          )
+          as _i7.Future<List<Map<String, dynamic>>>);
+}
+
+/// A class which mocks [AppState].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockAppState extends _i1.Mock implements _i19.AppState {
+  MockAppState() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  Map<String, Map<String, dynamic>> get balances =>
+      (super.noSuchMethod(
+            Invocation.getter(#balances),
+            returnValue: <String, Map<String, dynamic>>{},
+          )
+          as Map<String, Map<String, dynamic>>);
+
+  @override
+  List<Map<String, dynamic>> get basket =>
+      (super.noSuchMethod(
+            Invocation.getter(#basket),
+            returnValue: <Map<String, dynamic>>[],
+          )
+          as List<Map<String, dynamic>>);
+
+  @override
+  bool get balancesLoaded =>
+      (super.noSuchMethod(
+            Invocation.getter(#balancesLoaded),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  set balances(Map<String, Map<String, dynamic>>? value) => super.noSuchMethod(
+    Invocation.setter(#balances, value),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  bool get hasListeners =>
+      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
+          as bool);
+
+  @override
+  void updateUser(_i4.User? user) => super.noSuchMethod(
+    Invocation.method(#updateUser, [user]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i7.Future<void> loadUserState() =>
+      (super.noSuchMethod(
+            Invocation.method(#loadUserState, []),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
+          )
+          as _i7.Future<void>);
+
+  @override
+  bool canAdd(String? categoryRaw) =>
+      (super.noSuchMethod(
+            Invocation.method(#canAdd, [categoryRaw]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool addItem({
+    required String? upc,
+    required String? name,
+    required String? category,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#addItem, [], {
+              #upc: upc,
+              #name: name,
+              #category: category,
+            }),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  void incrementItem(String? upc) => super.noSuchMethod(
+    Invocation.method(#incrementItem, [upc]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void decrementItem(String? upc) => super.noSuchMethod(
+    Invocation.method(#decrementItem, [upc]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void addListener(_i20.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#addListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void removeListener(_i20.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#removeListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void dispose() => super.noSuchMethod(
+    Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+    Invocation.method(#notifyListeners, []),
     returnValueForMissingStub: null,
   );
 }
