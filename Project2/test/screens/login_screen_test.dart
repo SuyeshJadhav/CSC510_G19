@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mockito/mockito.dart';
 import 'package:wolfbite/screens/login_screen.dart';
-import 'package:wolfbite/screens/signup_page.dart';
 
 // Import the generated mocks
 import '../mocks/mocks.mocks.dart';
