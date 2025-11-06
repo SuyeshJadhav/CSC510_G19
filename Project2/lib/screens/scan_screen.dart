@@ -56,6 +56,25 @@ class _ScanScreenState extends State<ScanScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// Tests Firestore connectivity by querying a known UPC.
+  ///
+  /// Uses test UPC `000000743266` to verify [AplService] can read from Firestore.
+  /// Displays success or error message via [_snack].
+  // Future<void> _diagnose() async {
+  //   const testUpc = '000000743266';
+  //   try {
+  //     final info = await _apl.findByUpc(testUpc);
+  //     if (!mounted) return;
+  //     _snack(
+  //       info == null
+  //           ? 'Firestore MISSING: $testUpc'
+  //           : 'Firestore OK: $testUpc → ${info['name']}',
+  //     );
+  //   } catch (e) {
+  //     _snack('Firestore ERROR: $e');
+  //   }
+  // }
+
   /// Checks WIC eligibility for the scanned/entered barcode.
   ///
   /// Process:
@@ -219,7 +238,7 @@ class _ScanScreenState extends State<ScanScreen> {
                                 ? const Color(0xFFD1001C)
                                 : Colors.grey.shade300,
                           ),
-                          child: const Text('Add'),
+                          child: const Text('Add to Basket'),
                         ),
                       ],
                     ),
@@ -385,7 +404,7 @@ class _ScanScreenState extends State<ScanScreen> {
                                           : Colors.grey.shade300,
                                     ),
                                     icon: const Icon(Icons.add_shopping_cart),
-                                    label: const Text('Add to Basket'),
+                                    label: const Text('Add'),
                                   ),
                                 ),
                               ],
