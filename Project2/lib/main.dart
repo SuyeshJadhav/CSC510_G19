@@ -1,129 +1,146 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // <- contains your Firebase config
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
+import 'firebase_options.dart';
+import 'app_router.dart';
+import 'state/app_state.dart';
+
+/// Main entry point for the WIC Shopping Assistant application.
+///
+/// Initializes [Firebase] and sets up the app's dependency injection layer
+/// using [MultiProvider] from the `provider` package. This ensures:
+/// - Real-time [FirebaseAuth] state changes are available to all widgets
+/// - [AppState] is created once and persists across the widget tree
+/// - User authentication changes automatically sync [AppState]
+///
+/// The app uses [MaterialApp.router] with [GoRouter] for navigation,
+/// with auth guards configured in [router].
+///
+/// Steps performed:
+/// 1. Ensures Flutter engine is fully initialized via [WidgetsFlutterBinding.ensureInitialized]
+/// 2. Initializes Firebase with platform-specific options from [DefaultFirebaseOptions]
+/// 3. Starts the Flutter app with [MyApp] as the root widget
+///
+/// Side effects:
+/// - Connects to Firebase project (Auth, Firestore)
+/// - Enables platform-specific features (camera, storage)
+/// - Configures dependency injection for the entire app
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ensures Flutter is ready
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // <- uses your generated config
-  );
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
+/// Root widget that configures the app's theme and dependency injection.
+///
+/// Sets up a [MultiProvider] chain that:
+/// 1. Listens to [FirebaseAuth.authStateChanges] via `StreamProvider<User?>`
+/// 2. Wires [User] changes into [AppState] via `ChangeNotifierProxyProvider<User?, AppState>`
+/// 3. Configures Material 3 theme with teal color scheme
+/// 4. Sets up [GoRouter] for navigation with auth guards
+///
+/// ## Dependency Injection Structure
+///
+/// The provider hierarchy allows all descendant widgets to access:
+/// - Current [User] via `context.watch<User?>()`
+/// - [AppState] via `context.watch<AppState>()`
+///
+/// ## Provider Chain Details
+///
+/// ### StreamProvider
+/// Streams [FirebaseAuth] user changes to the widget tree. Listens to
+/// [FirebaseAuth.instance.authStateChanges()] which emits:
+/// - A [User] object when login succeeds
+/// - `null` when logout occurs
+/// - Initial state on app startup
+///
+/// The `initialData: null` ensures the app shows login screen before
+/// Firebase completes the first auth check.
+///
+/// ### ChangeNotifierProxyProvider
+/// Syncs [User] changes into [AppState] for app-wide state management.
+/// This creates a dependency relationship where [AppState] depends on
+/// the `StreamProvider<User?>`.
+///
+/// When [User] changes:
+/// 1. [AppState.updateUser] is called with the new [User]
+/// 2. [AppState] clears or loads data based on login/logout
+/// 3. All widgets watching [AppState] rebuild automatically
+///
+/// The `create` callback initializes [AppState] once on first build.
+/// The `update` callback runs whenever [User] changes.
+///
+/// ## Theme Configuration
+///
+/// Uses Material 3 design with teal as the primary color seed. The theme
+/// is automatically generated from [ColorScheme] based on the seed color.
+///
+/// ## Navigation Setup
+///
+/// Uses [MaterialApp.router] with [GoRouter] configured in [router] for:
+/// - Deep linking support
+/// - Auth-based route guards
+/// - Declarative navigation
 class MyApp extends StatelessWidget {
-
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    return MultiProvider(
+      providers: [
+        StreamProvider<User?>(
+          create: (_) => FirebaseAuth.instance.authStateChanges(),
+          initialData: null,
         ),
+        ChangeNotifierProxyProvider<User?, AppState>(
+          create: (_) => AppState(),
+          update: (_, user, appState) {
+            appState!.updateUser(user);
+            return appState;
+          },
+        ),
+      ],
+      child: MaterialApp.router(
+        title: 'Smart WIC Cart',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFFD1001C),
+            primary: const Color(0xFFD1001C),
+            secondary: const Color(0xFFD1001C),
+            surface: Colors.white,
+          ),
+          scaffoldBackgroundColor: Colors.white,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFD1001C),
+            foregroundColor: Colors.white,
+            elevation: 2,
+          ),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200, width: 1),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD1001C),
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey.shade300,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+          floatingActionButtonTheme: const FloatingActionButtonThemeData(
+            backgroundColor: Color(0xFFD1001C),
+            foregroundColor: Colors.white,
+          ),
+        ),
+        routerConfig: router,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

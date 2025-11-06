@@ -1,35 +1,85 @@
 name: Flutter CI
+
+# Run this on every push and pull request to 'main'
 on:
   push:
-    branches: [ "MAIN" ]
+    branches: [ "main" ] # Your file was correct, it should be lowercase 'main'
   pull_request:
-    branches: [ "MAIN" ]
+    branches: [ "main" ]
+
+# Grant permissions for the new job to write to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build:
+  # ---- JOB 1: YOUR EXISTING TEST JOB ----
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
-
+    
+    # Your file had 'Project2', which can fail on case-sensitive systems
     defaults:
       run:
-        working-directory: ./Project2
+        working-directory: ./Project2 
 
     steps:
-      # Step 1: Download the code from the repository.
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # Step 2: Install the Flutter software on the machine.
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      # Step 3: Install all the packages the app needs (from pubspec.yaml).
-      - run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-      # Step 4: Check if the code is formatted correctly.
-      - run: flutter format --output=none --set-exit-if-changed .
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
 
-      # Step 5: Analyze the code for potential bugs and style issues.
-      - run: flutter analyze
+      - name: Analyze code
+        run: flutter analyze
 
-      # Step 6: Run automated tests.
-      - run: flutter test
+      - name: Run tests
+        run: flutter test
+
+  deploy-docs:
+    name: Deploy Documentation
+    
+    # This job only runs if 'build-and-test' succeeds
+    needs: build-and-test 
+    
+    # This job only runs when you push to 'main' (not on Pull Requests)
+    if: github.ref == 'refs/heads/main' 
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./Project2 # Run in your project folder
+
+      - name: Generate docs
+        run: dart doc .
+        working-directory: ./Project2 # Run in your project folder
+        
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # dart doc generates files in 'doc/api'
+          path: ./Project2/doc/api 
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
