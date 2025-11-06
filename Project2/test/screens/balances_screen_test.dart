@@ -20,7 +20,7 @@ void main() {
       mockAuth = MockFirebaseAuth();
     });
 
-    Future<void> _pumpBalancesScreen(WidgetTester tester) async {
+    Future<void> pumpBalancesScreen(WidgetTester tester) async {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
@@ -42,7 +42,7 @@ void main() {
       when(mockAppState.balancesLoaded).thenReturn(false);
       when(mockAppState.balances).thenReturn({});
 
-      await _pumpBalancesScreen(tester);
+      await pumpBalancesScreen(tester);
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
@@ -53,7 +53,7 @@ void main() {
       when(mockAppState.balancesLoaded).thenReturn(true);
       when(mockAppState.balances).thenReturn({});
 
-      await _pumpBalancesScreen(tester);
+      await pumpBalancesScreen(tester);
 
       expect(find.text('No benefit data yet'), findsOneWidget);
     });
@@ -67,7 +67,7 @@ void main() {
         'FRUITS': {'allowed': null, 'used': 5},
       });
 
-      await _pumpBalancesScreen(tester);
+      await pumpBalancesScreen(tester);
 
       expect(find.text('MILK'), findsOneWidget);
       expect(find.text('Used: 1 of 3 items'), findsOneWidget);
@@ -84,7 +84,7 @@ void main() {
       when(mockAuth.signOut()).thenAnswer((_) async {});
       when(mockGoRouter.go(any)).thenReturn(null);
 
-      await _pumpBalancesScreen(tester);
+      await pumpBalancesScreen(tester);
 
       await tester.tap(find.byIcon(Icons.logout));
       await tester.pumpAndSettle();

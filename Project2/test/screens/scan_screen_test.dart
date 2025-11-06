@@ -110,7 +110,8 @@ void main() {
       await tester.tap(find.text('Check'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Add to Basket'));
+      // Desktop mode uses "Add" button
+      await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
 
       verify(
@@ -122,48 +123,47 @@ void main() {
       ).called(1);
     });
 
-    testWidgets(
-      'disables "Add to Basket" button when category limit is reached',
-      (tester) async {
-        when(mockAplService.findByUpc('12345')).thenAnswer(
-          (_) async => {'name': 'Test Product', 'category': 'Test Category'},
-        );
-        when(mockAppState.canAdd('Test Category')).thenReturn(false);
-        when(
-          mockAppState.addItem(
-            upc: anyNamed('upc'),
-            name: anyNamed('name'),
-            category: anyNamed('category'),
-          ),
-        ).thenReturn(true);
+    testWidgets('disables "Add" button when category limit is reached', (
+      tester,
+    ) async {
+      when(mockAplService.findByUpc('12345')).thenAnswer(
+        (_) async => {'name': 'Test Product', 'category': 'Test Category'},
+      );
+      when(mockAppState.canAdd('Test Category')).thenReturn(false);
+      when(
+        mockAppState.addItem(
+          upc: anyNamed('upc'),
+          name: anyNamed('name'),
+          category: anyNamed('category'),
+        ),
+      ).thenReturn(true);
 
-        await pumpScanScreen(tester);
+      await pumpScanScreen(tester);
 
-        await tester.enterText(find.byType(TextField), '12345');
-        await tester.tap(find.text('Check'));
-        await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '12345');
+      await tester.tap(find.text('Check'));
+      await tester.pumpAndSettle();
 
-        // Verify product info appears
-        expect(find.text('Test Product'), findsOneWidget);
-        expect(find.text('Category limit reached'), findsOneWidget);
+      // Verify product info appears
+      expect(find.text('Test Product'), findsOneWidget);
+      expect(find.text('Category limit reached'), findsOneWidget);
 
-        // Verify "Add to Basket" text is visible
-        expect(find.text('Add to Basket'), findsOneWidget);
+      // Verify "Add" text is visible (desktop mode)
+      expect(find.text('Add'), findsOneWidget);
 
-        // Try to tap the "Add to Basket" button - it should be disabled and do nothing
-        await tester.tap(find.text('Add to Basket'));
-        await tester.pumpAndSettle();
+      // Try to tap the "Add" button - it should be disabled and do nothing
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
 
-        // Verify that addItem was NOT called (because button is disabled)
-        verifyNever(
-          mockAppState.addItem(
-            upc: anyNamed('upc'),
-            name: anyNamed('name'),
-            category: anyNamed('category'),
-          ),
-        );
-      },
-    );
+      // Verify that addItem was NOT called (because button is disabled)
+      verifyNever(
+        mockAppState.addItem(
+          upc: anyNamed('upc'),
+          name: anyNamed('name'),
+          category: anyNamed('category'),
+        ),
+      );
+    });
     testWidgets('clears input after successful add', (
       WidgetTester tester,
     ) async {
@@ -185,7 +185,8 @@ void main() {
       await tester.tap(find.text('Check'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Add to Basket'));
+      // Desktop mode uses "Add" button
+      await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
 
       final textField = tester.widget<TextField>(find.byType(TextField));
@@ -233,7 +234,7 @@ void main() {
       expect(find.text('Place barcode inside the square'), findsOneWidget);
       expect(find.byType(MobileScanner), findsOneWidget);
       expect(find.text('Re-check'), findsOneWidget);
-      expect(find.text('Add'), findsOneWidget);
+      expect(find.text('Add to Basket'), findsOneWidget);
 
       addTearDown(() {
         tester.view.resetPhysicalSize();
@@ -277,7 +278,7 @@ void main() {
       // Mobile mode doesn't have text input - need to simulate barcode scan
       // Since we can't trigger _onDetect directly, this test verifies initial state
       final addButtonFinder = find.ancestor(
-        of: find.text('Add'),
+        of: find.text('Add to Basket'),
         matching: find.byType(FilledButton),
       );
       expect(addButtonFinder, findsOneWidget);
@@ -377,7 +378,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Add button should be disabled initially
-      final addButtonFinder = find.widgetWithText(FilledButton, 'Add');
+      final addButtonFinder = find.widgetWithText(
+        FilledButton,
+        'Add to Basket',
+      );
       expect(addButtonFinder, findsOneWidget);
 
       final addButton = tester.widget<FilledButton>(addButtonFinder);

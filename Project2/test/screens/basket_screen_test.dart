@@ -26,7 +26,7 @@ class TestAppState extends AppState {
     final cat = category.trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
     // Ensure category exists/capped like real code
     // (copy minimal bits from real helpers)
-    Map<String, dynamic> _ensure(String c) {
+    Map<String, dynamic> ensure(String c) {
       if (!balances.containsKey(c)) {
         int? allowed;
         if (c.contains('CVB') ||
@@ -59,7 +59,7 @@ class TestAppState extends AppState {
       return balances[c]!;
     }
 
-    final cap = _ensure(cat);
+    final cap = ensure(cat);
     final allowed = cap['allowed'];
     final used = (cap['used'] ?? 0) as int;
     if (allowed is int && used >= allowed) return false;

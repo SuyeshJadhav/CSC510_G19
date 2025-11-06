@@ -13,7 +13,7 @@ class SignupPage extends StatefulWidget {
   final FirebaseFirestore? firestore;
 
   // --- (2) Make the constructor const and accept the new variables ---
-  const SignupPage({Key? key, this.auth, this.firestore}) : super(key: key);
+  const SignupPage({super.key, this.auth, this.firestore});
 
   @override
   State<SignupPage> createState() => _SignupPageState();

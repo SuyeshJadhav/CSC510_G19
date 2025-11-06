@@ -221,26 +221,33 @@ class _ScanScreenState extends State<ScanScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        FilledButton(
-                          onPressed: (_lastInfo != null)
-                              ? () => _checkEligibility(_lastScanned ?? '')
-                              : null,
-                          child: const Text('Re-check'),
-                        ),
-                        const SizedBox(width: 12),
-                        FilledButton(
-                          onPressed: canAdd ? _addToBasket : null,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: canAdd
-                                ? const Color(0xFFD1001C)
-                                : Colors.grey.shade300,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: (_lastInfo != null)
+                                  ? () => _checkEligibility(_lastScanned ?? '')
+                                  : null,
+                              child: const Text('Re-check'),
+                            ),
                           ),
-                          child: const Text('Add to Basket'),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: canAdd ? _addToBasket : null,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: canAdd
+                                    ? const Color(0xFFD1001C)
+                                    : Colors.grey.shade300,
+                              ),
+                              child: const Text('Add to Basket'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     if (_lastInfo != null) ...[
                       const SizedBox(height: 16),
