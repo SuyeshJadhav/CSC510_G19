@@ -1,4 +1,4 @@
-name: Flutter CI & Docs
+name: Flutter CI
 
 # Run this on every push and pull request to 'main'
 on:
