@@ -11,10 +11,9 @@
     <a href="LICENSE.md">
         <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
     </a>
-    <a href="https://doi.org/10.5281/zenodo.123456">
-        <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.123456.svg" alt="DOI">
+    <a href="https://doi.org/10.5281/zenodo.17538613">
+        <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17538613.svg" alt="DOI">
     </a>
-    <img src="https://img.shields.io/badge/code%20style-effective_dart-blue" alt="Code Style">
     <img src="https://img.shields.io/github/issues/SuyeshJadhav/CSC510_G19" alt="GitHub Issues">
     <img src="https://img.shields.io/github/stars/SuyeshJadhav/CSC510_G19?style=social" alt="GitHub Stars">
 </p>
