@@ -29,13 +29,22 @@ class TestAppState extends AppState {
     Map<String, dynamic> _ensure(String c) {
       if (!balances.containsKey(c)) {
         int? allowed;
-        if (c.contains('CVB') || c.contains('FRUIT') || c.contains('VEGETABLE')) {
+        if (c.contains('CVB') ||
+            c.contains('FRUIT') ||
+            c.contains('VEGETABLE')) {
           allowed = null;
-        } else if (c.contains('MILK') || c.contains('CHEESE') || c.contains('YOGURT') || c.contains('DAIRY')) {
+        } else if (c.contains('MILK') ||
+            c.contains('CHEESE') ||
+            c.contains('YOGURT') ||
+            c.contains('DAIRY')) {
           allowed = 3;
-        } else if (c.contains('BREAD') || c.contains('GRAIN') || c.contains('CEREAL')) {
+        } else if (c.contains('BREAD') ||
+            c.contains('GRAIN') ||
+            c.contains('CEREAL')) {
           allowed = 2;
-        } else if (c.contains('MEAT') || c.contains('BEAN') || c.contains('PEANUT')) {
+        } else if (c.contains('MEAT') ||
+            c.contains('BEAN') ||
+            c.contains('PEANUT')) {
           allowed = 1;
         } else if (c.contains('JUICE')) {
           allowed = 1;
@@ -71,7 +80,10 @@ class TestAppState extends AppState {
   void incrementItem(String upc) {
     final i = basket.indexWhere((e) => e['upc'] == upc);
     if (i < 0) return;
-    final cat = (basket[i]['category'] as String).trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+    final cat = (basket[i]['category'] as String)
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .toUpperCase();
     final cap = balances[cat];
     if (cap != null) {
       final allowed = cap['allowed'];
@@ -87,7 +99,10 @@ class TestAppState extends AppState {
   void decrementItem(String upc) {
     final i = basket.indexWhere((e) => e['upc'] == upc);
     if (i < 0) return;
-    final cat = (basket[i]['category'] as String).trim().replaceAll(RegExp(r'\s+'), ' ').toUpperCase();
+    final cat = (basket[i]['category'] as String)
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .toUpperCase();
     if (balances.containsKey(cat)) {
       final used = (balances[cat]!['used'] ?? 0) as int;
       balances[cat]!['used'] = (used - 1).clamp(0, 999);
@@ -165,21 +180,32 @@ void main() {
       expect(find.text('Brown Bread'), findsOneWidget);
     });
 
-    testWidgets('increment and decrement update qty; remove at zero', (tester) async {
+    testWidgets('increment and decrement update qty; remove at zero', (
+      tester,
+    ) async {
       final app = TestAppState();
       app.addItem(upc: '333', name: 'Yogurt Cups', category: 'Dairy'); // qty=1
       await tester.pumpWidget(_appWithRouter(app: app));
       await tester.pumpAndSettle();
 
       // Tap plus -> qty becomes 2
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.add_circle_outline));
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.add_circle_outline),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('2'), findsWidgets); // one in avatar, one possibly in header badge
+      expect(
+        find.text('2'),
+        findsWidgets,
+      ); // one in avatar, one possibly in header badge
 
       // Tap minus twice -> remove item -> empty state
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.remove_circle_outline));
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.remove_circle_outline),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithIcon(IconButton, Icons.remove_circle_outline));
+      await tester.tap(
+        find.widgetWithIcon(IconButton, Icons.remove_circle_outline),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Your basket is empty'), findsOneWidget);
@@ -189,7 +215,12 @@ void main() {
       final app = TestAppState();
       // Force category cap reached: allowed=1, used=1, qty=1
       app.balances['MILK'] = {'allowed': 1, 'used': 1};
-      app.basket.add({'upc': '444', 'name': '2% Milk', 'category': 'MILK', 'qty': 1});
+      app.basket.add({
+        'upc': '444',
+        'name': '2% Milk',
+        'category': 'MILK',
+        'qty': 1,
+      });
       app.tick();
 
       await tester.pumpWidget(_appWithRouter(app: app));
@@ -205,11 +236,18 @@ void main() {
     testWidgets('tooltips exist for add/remove controls', (tester) async {
       final app = TestAppState();
       // canAdd true
-      app.addItem(upc: '555', name: 'Oat Cereal', category: 'Cereal'); // default allowed >= 2
+      app.addItem(
+        upc: '555',
+        name: 'Oat Cereal',
+        category: 'Cereal',
+      ); // default allowed >= 2
       await tester.pumpWidget(_appWithRouter(app: app));
       await tester.pumpAndSettle();
 
-      final minus = find.widgetWithIcon(IconButton, Icons.remove_circle_outline);
+      final minus = find.widgetWithIcon(
+        IconButton,
+        Icons.remove_circle_outline,
+      );
       final plus = find.widgetWithIcon(IconButton, Icons.add_circle_outline);
 
       final minusBtn = tester.widget<IconButton>(minus);
