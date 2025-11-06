@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// On failure, displays error message via [SnackBar].
   ///
   /// Sets [_loading] state to show progress indicator during auth.
-FirebaseAuth get auth => widget.auth ?? FirebaseAuth.instance;
+  FirebaseAuth get auth => widget.auth ?? FirebaseAuth.instance;
 
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
@@ -48,9 +48,9 @@ FirebaseAuth get auth => widget.auth ?? FirebaseAuth.instance;
       context.go('/scan'); // Go to main app
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Login failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

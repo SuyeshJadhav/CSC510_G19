@@ -43,8 +43,9 @@ void main() {
 
     testWidgets('password field is obscured by default', (tester) async {
       await tester.pumpWidget(MaterialApp(home: const LoginScreen()));
-      final passwordField =
-          tester.widget<TextField>(find.byType(TextField).last);
+      final passwordField = tester.widget<TextField>(
+        find.byType(TextField).last,
+      );
       expect(passwordField.obscureText, true);
     });
 
@@ -57,8 +58,7 @@ void main() {
 
     testWidgets('email field has correct keyboard type', (tester) async {
       await tester.pumpWidget(MaterialApp(home: const LoginScreen()));
-      final emailField =
-          tester.widget<TextField>(find.byType(TextField).first);
+      final emailField = tester.widget<TextField>(find.byType(TextField).first);
       expect(emailField.keyboardType, TextInputType.emailAddress);
     });
 
@@ -80,8 +80,9 @@ void main() {
     });
 
     // --- NEW TEST FOR 100% COVERAGE ---
-    testWidgets('When "Create account" is tapped, Then navigates to /signup',
-        (tester) async {
+    testWidgets('When "Create account" is tapped, Then navigates to /signup', (
+      tester,
+    ) async {
       // 1. Build the widget with mocks
       await tester.pumpWidget(createWidgetWithMocks());
 
@@ -97,95 +98,121 @@ void main() {
   // --- Group 2: Tests for Login Logic ---
   group('LoginScreen Submission Logic', () {
     testWidgets(
-        'Given valid credentials, When Sign In is tapped, Then calls Firebase and navigates to /scan',
-        (tester) async {
-      when(mockAuth.signInWithEmailAndPassword(
-        email: anyNamed('email'),
-        password: anyNamed('password'),
-      )).thenAnswer((_) async => MockUserCredential());
+      'Given valid credentials, When Sign In is tapped, Then calls Firebase and navigates to /scan',
+      (tester) async {
+        when(
+          mockAuth.signInWithEmailAndPassword(
+            email: anyNamed('email'),
+            password: anyNamed('password'),
+          ),
+        ).thenAnswer((_) async => MockUserCredential());
 
-      await tester.pumpWidget(createWidgetWithMocks());
+        await tester.pumpWidget(createWidgetWithMocks());
 
-      await tester.enterText(find.byType(TextFormField).at(0), 'test@test.com');
-      await tester.enterText(
-          find.byType(TextFormField).at(1), 'password123');
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(TextFormField).at(0),
+          'test@test.com',
+        );
+        await tester.enterText(find.byType(TextFormField).at(1), 'password123');
+        await tester.tap(find.text('Sign In'));
+        await tester.pumpAndSettle();
 
-      verify(mockAuth.signInWithEmailAndPassword(
-        email: 'test@test.com',
-        password: 'password123',
-      )).called(1);
-      verify(mockGoRouter.go('/scan')).called(1);
-    });
+        verify(
+          mockAuth.signInWithEmailAndPassword(
+            email: 'test@test.com',
+            password: 'password123',
+          ),
+        ).called(1);
+        verify(mockGoRouter.go('/scan')).called(1);
+      },
+    );
 
     // --- NEW TEST FOR 100% COVERAGE ---
     testWidgets(
-        'Given valid credentials, When form is submitted via keyboard, Then calls Firebase and navigates',
-        (tester) async {
-      // 1. Stub the mockAuth call to succeed
-      when(mockAuth.signInWithEmailAndPassword(
-        email: anyNamed('email'),
-        password: anyNamed('password'),
-      )).thenAnswer((_) async => MockUserCredential());
+      'Given valid credentials, When form is submitted via keyboard, Then calls Firebase and navigates',
+      (tester) async {
+        // 1. Stub the mockAuth call to succeed
+        when(
+          mockAuth.signInWithEmailAndPassword(
+            email: anyNamed('email'),
+            password: anyNamed('password'),
+          ),
+        ).thenAnswer((_) async => MockUserCredential());
 
-      // 2. Build the widget
-      await tester.pumpWidget(createWidgetWithMocks());
+        // 2. Build the widget
+        await tester.pumpWidget(createWidgetWithMocks());
 
-      // 3. Enter valid text
-      await tester.enterText(find.byType(TextFormField).at(0), 'test@test.com');
-      await tester.enterText(
-          find.byType(TextFormField).at(1), 'password123');
+        // 3. Enter valid text
+        await tester.enterText(
+          find.byType(TextFormField).at(0),
+          'test@test.com',
+        );
+        await tester.enterText(find.byType(TextFormField).at(1), 'password123');
 
-      // 4. Simulate pressing "done" on the keyboard
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+        // 4. Simulate pressing "done" on the keyboard
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
 
-      // 5. Verify Firebase was called
-      verify(mockAuth.signInWithEmailAndPassword(
-        email: 'test@test.com',
-        password: 'password123',
-      )).called(1);
+        // 5. Verify Firebase was called
+        verify(
+          mockAuth.signInWithEmailAndPassword(
+            email: 'test@test.com',
+            password: 'password123',
+          ),
+        ).called(1);
 
-      // 6. Verify we navigated
-      verify(mockGoRouter.go('/scan')).called(1);
-    });
+        // 6. Verify we navigated
+        verify(mockGoRouter.go('/scan')).called(1);
+      },
+    );
 
     testWidgets(
-        'Given invalid credentials, When Sign In fails, Then shows a SnackBar',
-        (tester) async {
-      when(mockAuth.signInWithEmailAndPassword(
-        email: anyNamed('email'),
-        password: anyNamed('password'),
-      )).thenThrow(FirebaseAuthException(
-        code: 'wrong-password',
-        message: 'Invalid password',
-      ));
-
-      await tester.pumpWidget(MaterialApp(
-        home: ScaffoldMessenger(
-          child: InheritedGoRouter(
-            goRouter: mockGoRouter,
-            child: LoginScreen(auth: mockAuth),
+      'Given invalid credentials, When Sign In fails, Then shows a SnackBar',
+      (tester) async {
+        when(
+          mockAuth.signInWithEmailAndPassword(
+            email: anyNamed('email'),
+            password: anyNamed('password'),
           ),
-        ),
-      ));
+        ).thenThrow(
+          FirebaseAuthException(
+            code: 'wrong-password',
+            message: 'Invalid password',
+          ),
+        );
 
-      await tester.enterText(find.byType(TextFormField).at(0), 'test@test.com');
-      await tester.enterText(find.byType(TextFormField).at(1), 'wrongpass');
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ScaffoldMessenger(
+              child: InheritedGoRouter(
+                goRouter: mockGoRouter,
+                child: LoginScreen(auth: mockAuth),
+              ),
+            ),
+          ),
+        );
 
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text('Invalid password'), findsOneWidget);
-      verifyNever(mockGoRouter.go(any));
-    });
+        await tester.enterText(
+          find.byType(TextFormField).at(0),
+          'test@test.com',
+        );
+        await tester.enterText(find.byType(TextFormField).at(1), 'wrongpass');
+        await tester.tap(find.text('Sign In'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text('Invalid password'), findsOneWidget);
+        verifyNever(mockGoRouter.go(any));
+      },
+    );
 
     testWidgets('Shows loading indicator when signing in', (tester) async {
-      when(mockAuth.signInWithEmailAndPassword(
-        email: anyNamed('email'),
-        password: anyNamed('password'),
-      )).thenAnswer((_) {
+      when(
+        mockAuth.signInWithEmailAndPassword(
+          email: anyNamed('email'),
+          password: anyNamed('password'),
+        ),
+      ).thenAnswer((_) {
         // Create a Future that never finishes
         return Completer<UserCredential>().future;
       });
@@ -193,8 +220,7 @@ void main() {
       await tester.pumpWidget(createWidgetWithMocks());
 
       await tester.enterText(find.byType(TextFormField).at(0), 'test@test.com');
-      await tester.enterText(
-          find.byType(TextFormField).at(1), 'password123');
+      await tester.enterText(find.byType(TextFormField).at(1), 'password123');
       await tester.tap(find.text('Sign In'));
 
       // Pump one frame to show the loading state

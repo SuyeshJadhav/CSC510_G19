@@ -1,6 +1,27 @@
 # WolfBite
 
-![Flutter CI](https://github.com/SuyeshJadhav/CSC510_G19/actions/workflows/flutter-ci.yml/badge.svg)
+<p align="center">
+<!-- CI/CD Badge -->
+<a href="https://github.com/SuyeshJadhav/CSC510_G19/actions/workflows/flutter-ci.yml">
+    <img src="https://github.com/SuyeshJadhav/CSC510_G19/actions/workflows/flutter-ci.yml/badge.svg" alt="Flutter CI">
+</a>
+
+<!-- Documentation Badge -->
+<a href="https://suyeshjadhav.github.io/CSC510_G19/">
+    <img src="https://img.shields.io/badge/docs-live-brightgreen.svg" alt="Documentation">
+</a>
+
+<!-- License Badge -->
+<a href="LICENSE.md">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
+</a>
+
+<!-- DOI Badge -->
+<a href="https://doi.org/10.5281/zenodo.123456">
+    <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.123456.svg" alt="DOI">
+</a>
+
+</p>
 
 A food delivery app with a main feature that uses a barcode reader for WIC eligibility checking. This project is developed for the CSC510 software engineering course.
 
@@ -12,7 +33,7 @@ This guide provides a short overview of how to get the WolfBite project running 
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/SuyeshJadhav/CSC510_G19.git](https://github.com/SuyeshJadhav/CSC510_G19.git)
+    git clone https://github.com/SuyeshJadhav/CSC510_G19.git
     ```
 2.  **Navigate to the project directory:**
     ```bash
@@ -33,10 +54,10 @@ This guide provides a short overview of how to get the WolfBite project running 
 
 Our project relies on the following third-party packages. All dependencies can be downloaded automatically using the `flutter pub get` command.
 
-| Package | Version | License | Link | Mandatory |
-|---|---|---|---|---|
-| `firebase_core` | `^4.2.0` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/firebase_core) | Yes |
-| `go_router` | `^16.2.5` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/go_router) | Yes |
-| `provider` | `^6.1.5+1` | **MIT** | [pub.dev link](https://pub.dev/packages/provider) | Yes |
-| `mobile_scanner` | `^7.1.2` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/mobile_scanner) | Yes |
-| `qr_flutter` | `^4.1.0` | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/qr_flutter) | Yes |
+| Package          | Version    | License      | Link                                                    | Mandatory |
+| ---------------- | ---------- | ------------ | ------------------------------------------------------- | --------- |
+| `firebase_core`  | `^4.2.0`   | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/firebase_core)  | Yes       |
+| `go_router`      | `^16.2.5`  | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/go_router)      | Yes       |
+| `provider`       | `^6.1.5+1` | **MIT**      | [pub.dev link](https://pub.dev/packages/provider)       | Yes       |
+| `mobile_scanner` | `^7.1.2`   | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/mobile_scanner) | Yes       |
+| `qr_flutter`     | `^4.1.0`   | BSD 3-Clause | [pub.dev link](https://pub.dev/packages/qr_flutter)     | Yes       |
