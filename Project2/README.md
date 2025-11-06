@@ -149,7 +149,6 @@ flutter test test/screens/signup_page_test.dart
 ## 📚 Documentation
 
 - [User Guide](https://suyeshjadhav.github.io/CSC510_G19/) - Comprehensive user documentation
-- [API Documentation](docs/API.md) - API reference and endpoints
 - [Contributing Guidelines](https://github.com/SuyeshJadhav/CSC510_G19/blob/main/Project2/CONTRIBUTING.md) - How to contribute to this project
 - [Code of Conduct](https://github.com/SuyeshJadhav/CSC510_G19/blob/main/Project2/CODE_OF_CONDUCT.md) - Community guidelines
 
@@ -178,11 +177,11 @@ We welcome contributions! Please see our [Contributing Guidelines](https://githu
 
 **CSC510 - Group 19**
 
-| Name                     | Role           | GitHub                                                 |
-| ------------------------ | -------------- | ------------------------------------------------------ |
-| Suyesh Jadhav            | Lead Developer | [@SuyeshJadhav](https://github.com/SuyeshJadhav)       |
-| Digvijay Sanjeev Sonvane | Developer      | [@digvijaysonvane](https://github.com/digvijaysonvane) |
-| Vanaja Binay Agarwal     | Developer      | [@vanajaagarwal](https://github.com/vanajaagarwal)     |
+| Name                     | Role      | GitHub                                                 |
+| ------------------------ | --------- | ------------------------------------------------------ |
+| Suyesh Jadhav            | Developer | [@SuyeshJadhav](https://github.com/SuyeshJadhav)       |
+| Digvijay Sanjeev Sonvane | Developer | [@digvijaysonvane](https://github.com/DVJAY11)         |
+| Vanaja Binay Agarwal     | Developer | [@vanajaagarwal](https://github.com/PositivelyBookish) |
 
 ---
 
