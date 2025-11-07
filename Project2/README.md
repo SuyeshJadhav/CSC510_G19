@@ -193,12 +193,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](https://gi
 
 ## 📄 Demo
 
-<video width="600" controls>
-  <source src="Wolfbite_demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-
+[![▶ Watch Demo](https://img.youtube.com/vi/jVnnK5uBznI/maxresdefault.jpg)](https://www.youtube.com/watch?v=jVnnK5uBznI)
 ---
 
 
