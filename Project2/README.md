@@ -117,17 +117,17 @@ Before you begin, ensure you have the following installed:
 
 Our project leverages these carefully selected packages:
 
-| Package           | Version  | Purpose              | License      | Documentation                                    |
-| ----------------- | -------- | -------------------- | ------------ | ------------------------------------------------ |
-| `firebase_core`   | ^4.2.0   | Firebase integration | BSD 3-Clause | [Docs](https://pub.dev/packages/firebase_core)   |
-| `firebase_auth`   | Latest   | User authentication  | BSD 3-Clause | [Docs](https://pub.dev/packages/firebase_auth)   |
-| `cloud_firestore` | Latest   | Cloud database       | BSD 3-Clause | [Docs](https://pub.dev/packages/cloud_firestore) |
-| `go_router`       | ^16.2.5  | Navigation & routing | BSD 3-Clause | [Docs](https://pub.dev/packages/go_router)       |
-| `provider`        | ^6.1.5+1 | State management     | MIT          | [Docs](https://pub.dev/packages/provider)        |
-| `mobile_scanner`  | ^7.1.2   | Barcode scanning     | BSD 3-Clause | [Docs](https://pub.dev/packages/mobile_scanner)  |
-| `qr_flutter`      | ^4.1.0   | QR code generation   | BSD 3-Clause | [Docs](https://pub.dev/packages/qr_flutter)      |
+| Package           | Version  | Purpose              | License      | Documentation                                    | Mandatory/Optional |
+| ----------------- | -------- | -------------------- | ------------ | ------------------------------------------------ | ----------------- |
+| `firebase_core`   | ^4.2.0   | Firebase integration | BSD 3-Clause | [Docs](https://pub.dev/packages/firebase_core)   | Mandatory         |
+| `firebase_auth`   | Latest   | User authentication  | BSD 3-Clause | [Docs](https://pub.dev/packages/firebase_auth)   | Mandatory         |
+| `cloud_firestore` | Latest   | Cloud database       | BSD 3-Clause | [Docs](https://pub.dev/packages/cloud_firestore) | Mandatory         |
+| `go_router`       | ^16.2.5  | Navigation & routing | BSD 3-Clause | [Docs](https://pub.dev/packages/go_router)       | Mandatory         |
+| `provider`        | ^6.1.5+1 | State management     | MIT          | [Docs](https://pub.dev/packages/provider)        | Mandatory         |
+| `mobile_scanner`  | ^7.1.2   | Barcode scanning     | BSD 3-Clause | [Docs](https://pub.dev/packages/mobile_scanner)  | Mandatory         |
+| `qr_flutter`      | ^4.1.0   | QR code generation   | BSD 3-Clause | [Docs](https://pub.dev/packages/qr_flutter)      | Optional          |
 
-> **Note**: All dependencies are automatically installed via `flutter pub get`
+> **Note**: All dependencies are automatically installed via `flutter pub get
 
 ## 🧪 Testing
 
