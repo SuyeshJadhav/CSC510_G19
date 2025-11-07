@@ -6,7 +6,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// names, categories, and eligibility status. This service provides methods
 /// to look up products and find substitutes within the same category.
 class AplService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db;
+
+  AplService({FirebaseFirestore? db}) : _db = db ?? FirebaseFirestore.instance;
 
   /// Looks up a product by its Universal Product Code (UPC).
   ///

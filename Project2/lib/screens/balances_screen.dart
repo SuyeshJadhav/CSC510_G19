@@ -21,7 +21,8 @@ import '../state/app_state.dart';
 ///
 /// Usage: Navigated to via `/benefits` route in bottom navigation.
 class BalancesScreen extends StatelessWidget {
-  const BalancesScreen({super.key});
+  const BalancesScreen({super.key, this.auth});
+  final FirebaseAuth? auth;
 
   /// Signs the user out of [FirebaseAuth] and navigates to login screen.
   ///
@@ -32,7 +33,7 @@ class BalancesScreen extends StatelessWidget {
   /// - Calls [FirebaseAuth.instance.signOut]
   /// - Navigates to `/login` via [GoRouter]
   Future<void> _signOut(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
+    await (auth ?? FirebaseAuth.instance).signOut();
     if (context.mounted) {
       context.go('/login');
     }
