@@ -191,6 +191,13 @@ This project is licensed under the MIT License - see the [LICENSE.md](https://gi
 
 ---
 
+## 📄 Demo
+
+[Watch Demo](Project2/Wolfbite_demo.mp4)
+
+---
+
+
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/SuyeshJadhav/CSC510_G19/issues)
